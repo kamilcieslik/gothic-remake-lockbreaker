@@ -243,32 +243,45 @@
 
     table {
       width: 100%;
-      min-width: 620px;
+      min-width: auto;
       border-collapse: separate;
-      border-spacing: 6px;
+      border-spacing: 4px;
     }
 
     th {
       color: var(--muted);
-      font-size: .83rem;
+      font-size: .76rem;
       font-weight: 700;
+      white-space: nowrap;
+    }
+
+    th:first-child {
+      width: 50px;
+      background: rgba(217,154,57,.12);
+      border: 1px solid rgba(217,154,57,.25);
+      border-radius: 8px;
+      padding: 4px 6px;
+      font-weight: 800;
+      color: var(--accent-2);
     }
 
     td, th {
       text-align: center;
       vertical-align: middle;
+      padding: 0;
     }
 
     .relation {
-      width: 100%;
-      min-width: 78px;
-      padding: 9px 4px;
-      border-radius: 10px;
+      display: inline-block;
+      min-width: 40px;
+      padding: 5px 2px;
+      border-radius: 8px;
       border: 1px solid var(--border);
       background: #17110d;
       color: var(--muted);
       font-weight: 800;
       box-shadow: none;
+      font-size: .71rem;
     }
 
     .relation.same {
@@ -449,13 +462,13 @@
       }
 
       table {
-        min-width: 560px;
-        border-spacing: 5px;
+        min-width: auto;
+        border-spacing: 4px;
       }
 
       .relation {
-        min-width: 66px;
-        padding: 8px 3px;
+        min-width: 40px;
+        padding: 5px 2px;
       }
 
       .solve-btn {
@@ -729,12 +742,12 @@
 
       const header = document.createElement("tr");
       const corner = document.createElement("th");
-      corner.textContent = "Moved plate ↓";
+      corner.textContent = "Plate ↓";
       header.appendChild(corner);
 
       for (let target = 1; target <= state.n; target++) {
         const th = document.createElement("th");
-        th.textContent = `Plate ${target}`;
+        th.textContent = `P ${target}`;
         header.appendChild(th);
       }
       matrixEl.appendChild(header);
@@ -743,7 +756,7 @@
         const tr = document.createElement("tr");
 
         const rowHead = document.createElement("th");
-        rowHead.textContent = `Plate ${src}`;
+        rowHead.textContent = `P ${src}`;
         tr.appendChild(rowHead);
 
         for (let target = 1; target <= state.n; target++) {
