@@ -9,7 +9,12 @@ https://gothic-remake-lockbreaker.com
 
 ## Screenshot
 
-![Screenshot](demo.png)
+<div align="center">
+
+![Screenshot Mobile](demo-mobile.png)
+![Screenshot Desktop](demo-desktop.png)
+
+</div>
 
 ---
 
