@@ -723,7 +723,7 @@
       }
       matrixEl.appendChild(header);
 
-      for (let src = 1; src <= state.n; src++) {
+      for (let src = state.n; src >= 1; src--) {
         const tr = document.createElement("tr");
 
         const rowHead = document.createElement("th");
