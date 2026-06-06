@@ -552,6 +552,7 @@
       </div>
       <div id="result" class="result" style="margin-top:12px;">Enter lock data and press Solve.</div>
       <div class="button-row">
+        <button class="secondary" id="copyBtn">Copy solution</button>
         <button class="secondary" id="shareBtn">Create share link</button>
         <button class="secondary" id="resetBtn">Reset</button>
       </div>
@@ -1056,6 +1057,22 @@
 
     document.getElementById("shareBtn").addEventListener("click", createShareLink);
     document.getElementById("resetBtn").addEventListener("click", resetAll);
+
+    document.getElementById("copyBtn").addEventListener("click", async () => {
+      const btn = document.getElementById("copyBtn");
+      const textToCopy = resultEl.innerText;
+
+      try {
+        await navigator.clipboard.writeText(textToCopy);
+        const originalText = btn.textContent;
+        btn.textContent = "Copied!";
+        setTimeout(() => {
+          btn.textContent = originalText;
+        }, 2000);
+      } catch {
+        alert("Could not copy to clipboard.");
+      }
+    });
 
     initRepoLinks();
     loadFromUrl();
