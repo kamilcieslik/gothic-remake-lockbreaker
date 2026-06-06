@@ -865,16 +865,29 @@
       lines.push(`<span class="success">${title}Solved in ${solution.moves.length} moves.</span>`);
       lines.push("");
 
-      solution.moves.forEach((move, idx) => {
-        const dir = move.direction === "left" ? "Left" : "Right";
-        lines.push(`${String(idx + 1).padStart(2, " ")}. Plate ${move.plate} → ${dir}`);
+      // Group consecutive identical moves
+      const groupedMoves = [];
+      let currentGroup = null;
+
+      solution.moves.forEach((move) => {
+        if (currentGroup && currentGroup.plate === move.plate && currentGroup.direction === move.direction) {
+          currentGroup.count++;
+        } else {
+          if (currentGroup) groupedMoves.push(currentGroup);
+          currentGroup = { plate: move.plate, direction: move.direction, count: 1 };
+        }
+      });
+      if (currentGroup) groupedMoves.push(currentGroup);
+
+      // Format grouped moves
+      groupedMoves.forEach((group, idx) => {
+        const dir = group.direction === "left" ? "Left" : "Right";
+        const suffix = group.count > 1 ? ` x${group.count}` : "";
+        lines.push(`${String(idx + 1).padStart(2, " ")}. Plate ${group.plate} → ${dir}${suffix}`);
       });
 
-      lines.push("");
-      lines.push("Final state: " + solution.states[solution.states.length - 1].map((v, i) => `${i+1}=${v}`).join(", "));
-
-      state.lastMoves = solution.moves
-        .map((move, idx) => `${idx + 1}. Plate ${move.plate} -> ${move.direction === "left" ? "Left" : "Right"}`)
+      state.lastMoves = groupedMoves
+        .map((group) => `Plate ${group.plate} → ${group.direction === "left" ? "Left" : "Right"}${group.count > 1 ? ` x${group.count}` : ""}`)
         .join("\n");
 
       return lines.join("\n");
