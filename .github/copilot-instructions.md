@@ -104,9 +104,12 @@ Prefer simple code over clever abstractions.
 - Select plate count
 - Set initial plate positions
 - Define interactions between plates
-- Solve lock
-- Show shortest solution
+- Solve lock (with 5-second timeout protection)
+- Show shortest solution (with move grouping: "x3", "x2", etc.)
+- Copy solution to clipboard
 - Share lock setup via URL
+- Keyboard shortcut (Enter in lock name field to solve)
+- Accessibility (aria-labels for screen readers)
 - Reset
 - SEO metadata
 - FAQ section
@@ -172,8 +175,8 @@ If supporting more than 7 plates:
 - ask whether such locks are confirmed in the game,
 - consider adding a hard max,
 - consider showing a warning,
-- consider adding timeout / node limit / graceful failure,
-- do not blindly set max to 20 without performance safeguards.
+- ✅ **DONE**: 5-second timeout (SOLVE_TIMEOUT_MS) and 100k iteration limit (SOLVE_MAX_ITERATIONS) prevent browser freezing,
+- do not blindly set max to 20 without further safeguards.
 
 ## PR review guidance
 
@@ -238,6 +241,8 @@ Gothic Remake Lockbreaker is a fan-made project and is not affiliated with, endo
 - Avoid build tooling unless clearly justified.
 - Keep functions small when possible.
 - Preserve existing behavior unless intentionally changing it.
+- Preserve accessibility: use aria-labels for interactive elements.
+- Preserve keyboard navigation: test Enter and Tab keys in all new interactive features.
 - Test manually after changes:
   - 1 plate
   - 5 plates
@@ -247,3 +252,4 @@ Gothic Remake Lockbreaker is a fan-made project and is not affiliated with, endo
   - share link load
   - mobile viewport
   - desktop viewport
+  - timeout scenario (try unsolvable puzzle)
