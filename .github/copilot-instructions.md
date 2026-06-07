@@ -53,8 +53,11 @@ The solver uses BFS over the state graph with a shared priority queue.
 - Goal is all zeroes.
 - Edges are valid moves: each plate × left/right.
 - BFS explores states with equal cost priority; cost is calculated differently depending on the selected algorithm mode:
-  - **Fewer plate switches** (default): prioritizes fewer plate switches (groups of moves), then fewest total moves.
-  - **Shortest moves**: prioritizes fewest total moves, then fewer plate switches as tiebreaker.
+  - **Fewer plate switches** (default, standard): prioritizes fewer plate switches (groups of moves), then fewest total moves.
+  - **Fewer plate switches (fast)**: quick heuristic for faster computation, less optimized.
+  - **Shortest moves** (standard): prioritizes fewest total moves, then fewer plate switches as tiebreaker.
+  - **Shortest moves (fast)**: quick heuristic for fastest shortest-move computation.
+- The solver runs in a Web Worker to avoid freezing the UI during long computations.
 - Do not replace priority queue search with a heuristic unless there is a strong reason.
 - Avoid changes that can freeze the browser for large plate counts.
 
@@ -93,6 +96,8 @@ The app is intentionally simple:
 - no framework
 - no build step
 - works fully in browser
+- works asynchronously via Web Worker to prevent UI freezing
+- loading overlay with minimum display time for visual feedback
 - no account
 - no tracking by the app itself
 - GitHub Pages deployment
@@ -106,8 +111,8 @@ Prefer simple code over clever abstractions.
 - Select plate count
 - Set initial plate positions
 - Define interactions between plates
-- Solve lock (with 15-second timeout protection)
-- Two algorithm modes: Fewer plate switches (default, prioritizes fewer plate switches) and Shortest moves (prioritizes minimum move count)
+- Solve lock (with 30-second timeout protection and async Web Worker)
+- Four algorithm modes: Fewer plate switches (standard and fast) and Shortest moves (standard and fast)
 - Copy solution to clipboard
 - Share lock setup via URL
 - Keyboard shortcut (Enter in lock name field to solve)
@@ -171,13 +176,14 @@ Known:
 - 7-plate locks exist.
 - Higher counts are not confirmed unless a user provides evidence.
 
-Because the solver uses BFS, large plate counts can become expensive and may freeze the browser.
+Because the solver uses BFS, large plate counts can become expensive and may consume significant resources.
 
 If supporting more than 7 plates:
 - ask whether such locks are confirmed in the game,
 - consider adding a hard max,
 - consider showing a warning,
-- ✅ **DONE**: 15-second timeout (SOLVE_TIMEOUT_MS) prevents browser freezing,
+- ✅ **DONE**: 30-second timeout (SOLVE_TIMEOUT_MS) with Web Worker prevents browser freezing,
+- ✅ **DONE**: Loading overlay with minimum display time provides visual feedback,
 - do not blindly set max to 20 without further safeguards.
 
 ## PR review guidance

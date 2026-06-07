@@ -5,23 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <title>Gothic Remake Lockpick Solver - Solve Lockpicking Puzzles Online</title>
-  <meta name="description" content="Free Gothic Remake lockpick solver. Solve lockpicking puzzles instantly by entering plate positions and interactions. Supports 1-7 plate locks." />
+  <meta name="description" content="Free Gothic Remake lockpick solver. Solve lockpicking puzzles with algorithm modes for fewer plate switches, shortest moves, and faster solving. Supports 1-7 plate locks." />
   <meta name="theme-color" content="#130e0a" />
 
   <!-- Open Graph / social preview -->
   <meta property="og:title" content="Gothic Remake Lockpick Solver" />
-  <meta property="og:description" content="Solve Gothic Remake lockpicking puzzles instantly. Supports 1-7 plate locks." />
+  <meta property="og:description" content="Solve Gothic Remake lockpicking puzzles with fewer-switches, shortest-moves, and fast algorithm modes." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://gothic-remake-lockbreaker.com/" />
   <meta property="og:image" content="https://gothic-remake-lockbreaker.com/og-image.png" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Gothic Remake Lockpick Solver" />
-  <meta name="twitter:description" content="Solve Gothic Remake lockpicking puzzles instantly. Supports 1-7 plate locks." />
+  <meta name="twitter:description" content="Solve Gothic Remake lockpicking puzzles with fewer-switches, shortest-moves, and fast algorithm modes." />
   <meta name="twitter:image" content="https://gothic-remake-lockbreaker.com/og-image.png" />
 
-  <!-- Inline SVG favicon -->
-  <link rel="icon" href='data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"%3E%3Crect width="64" height="64" rx="14" fill="%23130e0a"/%3E%3Ctext x="50%25" y="54%25" dominant-baseline="middle" text-anchor="middle" font-size="38"%3E%F0%9F%94%93%3C/text%3E%3C/svg%3E' />
-
+  <!-- Favicons -->
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  
   <style>
     :root {
       --bg: #0e0b08;
@@ -586,7 +590,7 @@
   <header>
     <div class="logo">🔓 Gothic Remake Lockbreaker</div>
     <p class="subtitle">
-      Free Gothic Remake lockpick solver. Solve lockpicking puzzles by entering plate positions and interactions.
+      Free Gothic Remake lockpick solver. Solve lockpicking puzzles with fewer-switches, shortest-moves, and fast algorithm modes.
     </p>
   </header>
 
@@ -638,7 +642,9 @@
         <label for="solveMode">Algorithm mode</label>
         <select id="solveMode">
           <option value="fewer-switches">Fewer plate switches</option>
+          <option value="fewer-switches-fast">Fewer plate switches (fast)</option>
           <option value="shortest">Shortest moves</option>
+          <option value="shortest-fast">Shortest moves (fast)</option>
         </select>
         <p class="hint" id="solveModeDescription"></p>
       </div>
@@ -661,7 +667,7 @@
       <h3>How do I solve lockpicking puzzles in Gothic Remake?</h3>
       <p>
         Enter the plate positions and interactions into the Gothic Remake lockpick solver.
-        By default, the solver prioritizes reducing plate switches for easier in-game execution, but you can also use "Shortest moves" mode for the minimum move count.
+        By default, the solver prioritizes reducing plate switches for easier in-game execution. You can also choose a shortest-move mode or a faster mode for slower devices.
       </p>
 
       <h3>Does this solver work for 7-plate locks?</h3>
@@ -682,8 +688,10 @@
 
       <h3>What is the difference between algorithm modes?</h3>
       <p>
-        “Fewer plate switches” prioritizes reducing how often you switch between plates, which can make the solution easier to follow, but it may use more moves.
-        “Shortest moves” guarantees the lowest number of individual moves and, when possible, prefers the shortest solution with fewer plate switches.
+        “Fewer plate switches” prioritizes reducing how often you switch between plates, then minimizes moves. It can be easier to follow in-game, but may use more moves.
+        “Fewer plate switches (fast)” is a quicker version focused on reducing plate switches, but it is less optimized than the full version.
+        “Shortest moves” guarantees the lowest number of individual moves and prefers fewer plate switches when several shortest solutions exist.
+        “Shortest moves (fast)” is the fastest strict shortest-move solver, but it may switch between plates more often.
       </p>
 
       <h3>Can I share the solution with others?</h3>
@@ -693,7 +701,8 @@
 
       <h3>What if the solver takes too long?</h3>
       <p>
-        The solver will try for up to 15 seconds. If no solution is found by then, it shows "No solution found" — this usually means the puzzle is impossible or too complex for the browser.
+        The solver will try for up to 30 seconds. If it times out, try one of the fast modes or check the entered lock setup.
+        A timeout does not always mean the lock is impossible — it may simply be too complex for the selected mode or device.
       </p>
 
       <h3>Is this an official Gothic Remake tool?</h3>
@@ -725,7 +734,7 @@
     const MIN = -3;
     const MAX = 3;
     const POSITIONS = [-3, -2, -1, 0, 1, 2, 3];
-    const SOLVE_TIMEOUT_MS = 15000;
+    const SOLVE_TIMEOUT_MS = 30000;
     const MIN_SOLVING_OVERLAY_MS = 1000;
     const SOLVE_MODE_STORAGE_KEY = "gothic-remake-lockbreaker-solve-mode";
 
@@ -763,20 +772,34 @@
       });
     }
 
+    function isValidSolveMode(mode) {
+      return [
+        "fewer-switches",
+        "fewer-switches-fast",
+        "shortest",
+        "shortest-fast"
+      ].includes(mode);
+    }
+
     function getSolveMode() {
-      return solveMode?.value === "shortest" ? "shortest" : "fewer-switches";
+      return isValidSolveMode(solveMode?.value) ? solveMode.value : "fewer-switches";
     }
 
     function updateSolveModeDescription() {
       if (!solveModeDescription) return;
 
-      if (getSolveMode() === "shortest") {
-        solveModeDescription.textContent =
-          "Guarantees the lowest number of individual moves and prefers fewer plate switches when several shortest solutions exist.";
-      } else {
-        solveModeDescription.textContent =
-          "Prioritizes fewer plate switches, making the solution easier to follow in-game. It may use more individual moves.";
-      }
+      const descriptions = {
+        "fewer-switches":
+          "Best for following the solution in-game. Prioritizes fewer plate switches, then fewer moves. May take longer.",
+        "fewer-switches-fast":
+          "Faster version focused on reducing plate switches. Usually easier to follow than strict shortest moves, but less optimized than the full version.",
+        "shortest":
+          "Guarantees the lowest number of individual moves and prefers fewer plate switches when several shortest solutions exist. May take longer.",
+        "shortest-fast":
+          "Fastest strict shortest-move solver. Guarantees the lowest number of individual moves, but may switch between plates more often."
+      };
+
+      solveModeDescription.textContent = descriptions[getSolveMode()];
     }
 
     function initSolveMode() {
@@ -784,7 +807,7 @@
 
       try {
         const storedMode = localStorage.getItem(SOLVE_MODE_STORAGE_KEY);
-        solveMode.value = storedMode === "shortest" ? "shortest" : "fewer-switches";
+        solveMode.value = isValidSolveMode(storedMode) ? storedMode : "fewer-switches";
       } catch {
         solveMode.value = "fewer-switches";
       }
@@ -1077,10 +1100,13 @@
         pathStates.push(node.values);
 
         if (node.move) {
-          moves.push({
-            plate: node.move.plate,
-            direction: node.move.direction
-          });
+          const count = node.move.count || 1;
+          for (let i = 0; i < count; i++) {
+            moves.push({
+              plate: node.move.plate,
+              direction: node.move.direction
+            });
+          }
         }
 
         index = node.prev;
@@ -1186,6 +1212,128 @@
       return null;
     }
 
+    function solveFastShortestMoves() {
+      normalizeStateForN();
+
+      const start = [];
+      for (let i = 1; i <= state.n; i++) {
+        start.push(state.start[i]);
+      }
+
+      if (isGoal(start)) {
+        return { moves: [], states: [start] };
+      }
+
+      const nodes = [{
+        values: start,
+        prev: -1,
+        move: null
+      }];
+
+      const queue = [0];
+      const seen = new Set([keyOf(start)]);
+      let head = 0;
+      const startTime = Date.now();
+
+      while (head < queue.length) {
+        if (Date.now() - startTime > SOLVE_TIMEOUT_MS) {
+          return { timeout: true };
+        }
+
+        const currentIndex = queue[head++];
+        const current = nodes[currentIndex];
+
+        for (let plate = 1; plate <= state.n; plate++) {
+          for (const direction of ["left", "right"]) {
+            const nextValues = applyMove(current.values, plate, direction);
+            if (!nextValues) continue;
+
+            const key = keyOf(nextValues);
+            if (seen.has(key)) continue;
+            seen.add(key);
+
+            const nextIndex = nodes.length;
+            nodes.push({
+              values: nextValues,
+              prev: currentIndex,
+              move: { plate, direction }
+            });
+
+            if (isGoal(nextValues)) {
+              return buildSolutionFromNodes(nextIndex, nodes);
+            }
+
+            queue.push(nextIndex);
+          }
+        }
+      }
+
+      return null;
+    }
+
+    function solveFastFewerPlateSwitches() {
+      normalizeStateForN();
+
+      const start = [];
+      for (let i = 1; i <= state.n; i++) {
+        start.push(state.start[i]);
+      }
+
+      if (isGoal(start)) {
+        return { moves: [], states: [start] };
+      }
+
+      const nodes = [{
+        values: start,
+        prev: -1,
+        move: null
+      }];
+
+      const queue = [0];
+      const seen = new Set([keyOf(start)]);
+      let head = 0;
+      const startTime = Date.now();
+
+      while (head < queue.length) {
+        if (Date.now() - startTime > SOLVE_TIMEOUT_MS) {
+          return { timeout: true };
+        }
+
+        const currentIndex = queue[head++];
+        const current = nodes[currentIndex];
+
+        for (let plate = 1; plate <= state.n; plate++) {
+          for (const direction of ["left", "right"]) {
+            let chainValues = current.values;
+
+            for (let count = 1; ; count++) {
+              chainValues = applyMove(chainValues, plate, direction);
+              if (!chainValues) break;
+
+              const key = keyOf(chainValues);
+              if (seen.has(key)) continue;
+              seen.add(key);
+
+              const nextIndex = nodes.length;
+              nodes.push({
+                values: chainValues,
+                prev: currentIndex,
+                move: { plate, direction, count }
+              });
+
+              if (isGoal(chainValues)) {
+                return buildSolutionFromNodes(nextIndex, nodes);
+              }
+
+              queue.push(nextIndex);
+            }
+          }
+        }
+      }
+
+      return null;
+    }
+
     function solveShortestMoves() {
       return solveWithPriority("shortest");
     }
@@ -1195,15 +1343,19 @@
     }
 
     function solve() {
-      return getSolveMode() === "fewer-switches"
-        ? solveFewerPlateSwitches()
-        : solveShortestMoves();
+      const mode = getSolveMode();
+
+      if (mode === "shortest") return solveShortestMoves();
+      if (mode === "shortest-fast") return solveFastShortestMoves();
+      if (mode === "fewer-switches-fast") return solveFastFewerPlateSwitches();
+
+      return solveFewerPlateSwitches();
     }
 
     function formatSolution(solution) {
       if (solution?.timeout) {
         state.lastMoves = "";
-        return `<span class="error">Solving timed out.</span>\nThe lock may be too complex for the browser, or the entered interactions may be incorrect.`;
+        return `<span class="error">Solving timed out.</span>\nTry one of the fast modes or check the entered lock setup. This lock may be too complex for the selected mode or device.`;
       }
 
       if (!solution) {
@@ -1212,7 +1364,7 @@
         if (isAlreadySolved) {
           return `<span class="error">All plates are already centered (0).</span>`;
         }
-        return `<span class="error">No solution found.</span>\nPossible causes:\n• Incorrect interactions defined\n• Puzzle is impossible to solve\n• Too complex for browser (timeout)`;
+        return `<span class="error">No solution found.</span>\nPossible causes:\n• Incorrect interactions defined\n• Puzzle is impossible to solve\n• Try another algorithm mode if the setup looks correct`;
       }
 
       if (solution.moves.length === 0) {
@@ -1420,7 +1572,7 @@
         self.onmessage = function(event) {
           try {
             const payload = event.data;
-            const result = solveWithPriority(
+            const result = solve(
               payload.n,
               payload.start,
               payload.effects,
@@ -1574,10 +1726,13 @@
             pathStates.push(node.values);
 
             if (node.move) {
-              moves.push({
-                plate: node.move.plate,
-                direction: node.move.direction
-              });
+              const count = node.move.count || 1;
+              for (let i = 0; i < count; i++) {
+                moves.push({
+                  plate: node.move.plate,
+                  direction: node.move.direction
+                });
+              }
             }
 
             index = node.prev;
@@ -1627,9 +1782,7 @@
 
           while (queue.length > 0) {
             if (Date.now() - startTime > timeoutMs) {
-              return {
-                timeout: true
-              };
+              return { timeout: true };
             }
 
             const currentIndex = queue.pop();
@@ -1650,11 +1803,7 @@
                 const nextValues = applyMove(current.values, plate, direction, effects);
                 if (!nextValues) continue;
 
-                const move = {
-                  plate: plate,
-                  direction: direction
-                };
-
+                const move = { plate: plate, direction: direction };
                 const nextMoveKey = moveKeyOf(move);
                 const nextCost = {
                   moves: current.moves + 1,
@@ -1686,6 +1835,128 @@
           }
 
           return null;
+        }
+
+        function solveFastShortestMoves(n, start, effects, timeoutMs) {
+          if (isGoal(start)) {
+            return {
+              moves: [],
+              states: [start]
+            };
+          }
+
+          const nodes = [{
+            values: start,
+            prev: -1,
+            move: null
+          }];
+
+          const queue = [0];
+          const seen = new Set([keyOf(start)]);
+          let head = 0;
+          const startTime = Date.now();
+
+          while (head < queue.length) {
+            if (Date.now() - startTime > timeoutMs) {
+              return { timeout: true };
+            }
+
+            const currentIndex = queue[head++];
+            const current = nodes[currentIndex];
+
+            for (let plate = 1; plate <= n; plate++) {
+              for (const direction of ["left", "right"]) {
+                const nextValues = applyMove(current.values, plate, direction, effects);
+                if (!nextValues) continue;
+
+                const key = keyOf(nextValues);
+                if (seen.has(key)) continue;
+                seen.add(key);
+
+                const nextIndex = nodes.length;
+                nodes.push({
+                  values: nextValues,
+                  prev: currentIndex,
+                  move: { plate: plate, direction: direction }
+                });
+
+                if (isGoal(nextValues)) {
+                  return buildSolutionFromNodes(nextIndex, nodes);
+                }
+
+                queue.push(nextIndex);
+              }
+            }
+          }
+
+          return null;
+        }
+
+        function solveFastFewerPlateSwitches(n, start, effects, timeoutMs) {
+          if (isGoal(start)) {
+            return {
+              moves: [],
+              states: [start]
+            };
+          }
+
+          const nodes = [{
+            values: start,
+            prev: -1,
+            move: null
+          }];
+
+          const queue = [0];
+          const seen = new Set([keyOf(start)]);
+          let head = 0;
+          const startTime = Date.now();
+
+          while (head < queue.length) {
+            if (Date.now() - startTime > timeoutMs) {
+              return { timeout: true };
+            }
+
+            const currentIndex = queue[head++];
+            const current = nodes[currentIndex];
+
+            for (let plate = 1; plate <= n; plate++) {
+              for (const direction of ["left", "right"]) {
+                let chainValues = current.values;
+
+                for (let count = 1; ; count++) {
+                  chainValues = applyMove(chainValues, plate, direction, effects);
+                  if (!chainValues) break;
+
+                  const key = keyOf(chainValues);
+                  if (seen.has(key)) continue;
+                  seen.add(key);
+
+                  const nextIndex = nodes.length;
+                  nodes.push({
+                    values: chainValues,
+                    prev: currentIndex,
+                    move: { plate: plate, direction: direction, count: count }
+                  });
+
+                  if (isGoal(chainValues)) {
+                    return buildSolutionFromNodes(nextIndex, nodes);
+                  }
+
+                  queue.push(nextIndex);
+                }
+              }
+            }
+          }
+
+          return null;
+        }
+
+        function solve(n, start, effects, mode, timeoutMs) {
+          if (mode === "shortest") return solveWithPriority(n, start, effects, "shortest", timeoutMs);
+          if (mode === "shortest-fast") return solveFastShortestMoves(n, start, effects, timeoutMs);
+          if (mode === "fewer-switches-fast") return solveFastFewerPlateSwitches(n, start, effects, timeoutMs);
+
+          return solveWithPriority(n, start, effects, "fewer-switches", timeoutMs);
         }
       `;
 
