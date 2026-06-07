@@ -301,6 +301,14 @@
       cursor: not-allowed;
     }
 
+    .solve-options {
+      margin-bottom: 12px;
+    }
+
+    .solve-options .hint {
+      margin-top: 6px;
+    }
+
     .actions {
       position: sticky;
       bottom: 0;
@@ -560,6 +568,16 @@
 
     <section class="card span-2">
       <h2>3. Solution</h2>
+
+      <div class="solve-options">
+        <label for="solveMode">Algorithm mode</label>
+        <select id="solveMode">
+          <option value="fewer-switches">Fewer plate switches</option>
+          <option value="shortest">Shortest moves</option>
+        </select>
+        <p class="hint" id="solveModeDescription"></p>
+      </div>
+
       <div class="actions">
         <button class="solve-btn" id="solveBtn">Solve lock</button>
       </div>
@@ -595,6 +613,12 @@
       <h3>What does "x3" mean in the solution?</h3>
       <p>
         It means you should perform that move 3 times in a row. For example, "Plate 2 → Right x3" means move Plate 2 to the right 3 times.
+      </p>
+
+      <h3>What is the difference between algorithm modes?</h3>
+      <p>
+        “Fewer plate switches” tries to reduce how often you switch between plates, which can make the solution easier to follow, but it may use more moves.
+        “Shortest moves” finds the solution with the lowest number of individual moves.
       </p>
 
       <h3>Can I share the solution with others?</h3>
@@ -637,6 +661,7 @@
     const MAX = 3;
     const POSITIONS = [-3, -2, -1, 0, 1, 2, 3];
     const SOLVE_TIMEOUT_MS = 15000;
+    const SOLVE_MODE_STORAGE_KEY = "gothic-remake-lockbreaker-solve-mode";
 
     const defaultState = () => ({
       n: 5,
@@ -654,6 +679,8 @@
     const matrixEl = document.getElementById("matrix");
     const resultEl = document.getElementById("result");
     const shareInfo = document.getElementById("shareInfo");
+    const solveMode = document.getElementById("solveMode");
+    const solveModeDescription = document.getElementById("solveModeDescription");
 
     function initRepoLinks() {
       const ids = ["repoTopLink", "starRepoLink", "repoLink"];
@@ -669,7 +696,44 @@
       });
     }
 
+    function getSolveMode() {
+      return solveMode?.value === "shortest" ? "shortest" : "fewer-switches";
+    }
 
+    function updateSolveModeDescription() {
+      if (!solveModeDescription) return;
+
+      if (getSolveMode() === "shortest") {
+        solveModeDescription.textContent =
+          "Finds the solution with the lowest number of individual moves. This is the strict shortest-path solver.";
+      } else {
+        solveModeDescription.textContent =
+          "Tries to reduce how often you switch between plates, making the solution easier to follow in-game. It may use more individual moves.";
+      }
+    }
+
+    function initSolveMode() {
+      if (!solveMode) return;
+
+      try {
+        const storedMode = localStorage.getItem(SOLVE_MODE_STORAGE_KEY);
+        solveMode.value = storedMode === "shortest" ? "shortest" : "fewer-switches";
+      } catch {
+        solveMode.value = "fewer-switches";
+      }
+
+      updateSolveModeDescription();
+
+      solveMode.addEventListener("change", () => {
+        updateSolveModeDescription();
+
+        try {
+          localStorage.setItem(SOLVE_MODE_STORAGE_KEY, getSolveMode());
+        } catch {
+          // localStorage may be unavailable in some browser modes. The app should still work.
+        }
+      });
+    }
 
     function normalizeStateForN() {
       state.n = Math.max(1, Math.min(7, Number(state.n) || 5));
@@ -859,7 +923,13 @@
 
         const parent = parents[index];
         if (parent.move) {
-          moves.push(parent.move);
+          const count = parent.move.count || 1;
+          for (let i = 0; i < count; i++) {
+            moves.push({
+              plate: parent.move.plate,
+              direction: parent.move.direction
+            });
+          }
         }
 
         index = parent.prev;
@@ -874,7 +944,7 @@
       };
     }
 
-    function solve() {
+    function solveShortestMoves() {
       normalizeStateForN();
 
       const start = [];
@@ -930,6 +1000,77 @@
       }
 
       return null;
+    }
+
+    function solveFewerPlateSwitches() {
+      normalizeStateForN();
+
+      const start = [];
+      for (let i = 1; i <= state.n; i++) {
+        start.push(state.start[i]);
+      }
+
+      if (isGoal(start)) {
+        return { moves: [], states: [start] };
+      }
+
+      const states = [start];
+      const parents = [{ prev: -1, move: null }];
+      const queue = [0];
+      const seen = new Map([[keyOf(start), 0]]);
+
+      let head = 0;
+      const startTime = Date.now();
+
+      while (head < queue.length) {
+        if (Date.now() - startTime > SOLVE_TIMEOUT_MS) {
+          return { timeout: true };
+        }
+
+        const currentIndex = queue[head++];
+        const currentValues = states[currentIndex];
+
+        for (let plate = 1; plate <= state.n; plate++) {
+          for (const direction of ["left", "right"]) {
+            let chainValues = currentValues;
+
+            for (let count = 1; ; count++) {
+              chainValues = applyMove(chainValues, plate, direction);
+              if (!chainValues) break;
+
+              const key = keyOf(chainValues);
+              if (seen.has(key)) continue;
+
+              const nextIndex = states.length;
+
+              seen.set(key, nextIndex);
+              states.push(chainValues);
+              parents.push({
+                prev: currentIndex,
+                move: {
+                  plate,
+                  direction,
+                  count
+                }
+              });
+
+              if (isGoal(chainValues)) {
+                return buildSolution(nextIndex, states, parents);
+              }
+
+              queue.push(nextIndex);
+            }
+          }
+        }
+      }
+
+      return null;
+    }
+
+    function solve() {
+      return getSolveMode() === "fewer-switches"
+        ? solveFewerPlateSwitches()
+        : solveShortestMoves();
     }
 
     function formatSolution(solution) {
@@ -1166,6 +1307,7 @@
     });
 
     initRepoLinks();
+    initSolveMode();
     loadFromUrl();
     render();
   </script>
