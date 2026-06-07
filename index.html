@@ -636,8 +636,7 @@
     const MIN = -3;
     const MAX = 3;
     const POSITIONS = [-3, -2, -1, 0, 1, 2, 3];
-    const SOLVE_TIMEOUT_MS = 5000;
-    const SOLVE_MAX_ITERATIONS = 100000;
+    const SOLVE_TIMEOUT_MS = 15000;
 
     const defaultState = () => ({
       n: 5,
@@ -737,6 +736,29 @@
       }
     }
 
+    function updateRelationButton(btn, value, src, target) {
+      btn.className = "relation " + (
+        value === "same" ? "same" :
+        value === "opposite" ? "opposite" :
+        ""
+      );
+
+      btn.textContent =
+        value === "same" ? "Same" :
+        value === "opposite" ? "Opp." :
+        "—";
+
+      const description =
+        value === "same" ? "moves in the same direction" :
+        value === "opposite" ? "moves in the opposite direction" :
+        "has no effect";
+
+      btn.setAttribute(
+        "aria-label",
+        `When moving Plate ${src}, Plate ${target} ${description}`
+      );
+    }
+
     function renderMatrix() {
       matrixEl.innerHTML = "";
 
@@ -770,14 +792,14 @@
             btn.disabled = true;
           } else {
             const value = state.effects[src]?.[target] || "none";
-            btn.className = "relation " + (value === "same" ? "same" : value === "opposite" ? "opposite" : "");
-            btn.textContent = value === "same" ? "Same" : value === "opposite" ? "Opp." : "—";
+            updateRelationButton(btn, value, src, target);
+
             btn.addEventListener("click", () => {
               cycleRelation(src, target);
-              renderMatrix();
+              const newValue = state.effects[src]?.[target] || "none";
+              updateRelationButton(btn, newValue, src, target);
               clearShareMessage();
             });
-            btn.setAttribute("aria-label", `When moving Plate ${src}, Plate ${target} ${value === "same" ? "moves in same direction" : "moves in opposite direction"}`);
           }
 
           td.appendChild(btn);
@@ -826,47 +848,83 @@
       return next;
     }
 
+    function buildSolution(goalIndex, states, parents) {
+      const moves = [];
+      const pathStates = [];
+
+      let index = goalIndex;
+
+      while (index !== -1) {
+        pathStates.push(states[index]);
+
+        const parent = parents[index];
+        if (parent.move) {
+          moves.push(parent.move);
+        }
+
+        index = parent.prev;
+      }
+
+      moves.reverse();
+      pathStates.reverse();
+
+      return {
+        moves,
+        states: pathStates
+      };
+    }
+
     function solve() {
       normalizeStateForN();
 
       const start = [];
-      for (let i = 1; i <= state.n; i++) start.push(state.start[i]);
+      for (let i = 1; i <= state.n; i++) {
+        start.push(state.start[i]);
+      }
 
       if (isGoal(start)) {
         return { moves: [], states: [start] };
       }
 
-      const queue = [{ values: start, moves: [], states: [start] }];
-      const seen = new Set([keyOf(start)]);
+      const states = [start];
+      const parents = [{ prev: -1, move: null }];
+      const queue = [0];
+      const seen = new Map([[keyOf(start), 0]]);
+
       let head = 0;
       const startTime = Date.now();
-      let iterations = 0;
 
       while (head < queue.length) {
-        iterations++;
-        if (iterations > SOLVE_MAX_ITERATIONS || Date.now() - startTime > SOLVE_TIMEOUT_MS) {
-          return null;
+        if (Date.now() - startTime > SOLVE_TIMEOUT_MS) {
+          return { timeout: true };
         }
-        const current = queue[head++];
+
+        const currentIndex = queue[head++];
+        const currentValues = states[currentIndex];
 
         for (let plate = 1; plate <= state.n; plate++) {
           for (const direction of ["left", "right"]) {
-            const nextValues = applyMove(current.values, plate, direction);
+            const nextValues = applyMove(currentValues, plate, direction);
             if (!nextValues) continue;
 
             const key = keyOf(nextValues);
             if (seen.has(key)) continue;
-            seen.add(key);
 
             const move = { plate, direction };
-            const nextMoves = current.moves.concat(move);
-            const nextStates = current.states.concat([nextValues]);
+            const nextIndex = states.length;
+
+            seen.set(key, nextIndex);
+            states.push(nextValues);
+            parents.push({
+              prev: currentIndex,
+              move
+            });
 
             if (isGoal(nextValues)) {
-              return { moves: nextMoves, states: nextStates };
+              return buildSolution(nextIndex, states, parents);
             }
 
-            queue.push({ values: nextValues, moves: nextMoves, states: nextStates });
+            queue.push(nextIndex);
           }
         }
       }
@@ -875,6 +933,11 @@
     }
 
     function formatSolution(solution) {
+      if (solution?.timeout) {
+        state.lastMoves = "";
+        return `<span class="error">Solving timed out.</span>\nThe lock may be too complex for the browser, or the entered interactions may be incorrect.`;
+      }
+
       if (!solution) {
         state.lastMoves = "";
         const isAlreadySolved = Object.values(state.start).every(v => v === 0);
