@@ -104,8 +104,8 @@ Prefer simple code over clever abstractions.
 - Select plate count
 - Set initial plate positions
 - Define interactions between plates
-- Solve lock (with 5-second timeout protection)
-- Show shortest solution (with move grouping: "x3", "x2", etc.)
+- Solve lock (with 15-second timeout protection)
+- Two algorithm modes: Fewer plate switches (default) and Shortest moves (with move grouping: "x3", "x2", etc.)
 - Copy solution to clipboard
 - Share lock setup via URL
 - Keyboard shortcut (Enter in lock name field to solve)
@@ -175,7 +175,7 @@ If supporting more than 7 plates:
 - ask whether such locks are confirmed in the game,
 - consider adding a hard max,
 - consider showing a warning,
-- ✅ **DONE**: 5-second timeout (SOLVE_TIMEOUT_MS) and 100k iteration limit (SOLVE_MAX_ITERATIONS) prevent browser freezing,
+- ✅ **DONE**: 15-second timeout (SOLVE_TIMEOUT_MS) prevents browser freezing,
 - do not blindly set max to 20 without further safeguards.
 
 ## PR review guidance
