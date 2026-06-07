@@ -21,7 +21,7 @@ https://gothic-remake-lockbreaker.com
 ## Features
 
 - Supports 1-7 plate locks
-- Finds the shortest valid solution
+- Two solving modes: Fewer plate switches (default for easier execution) and Shortest moves (minimum move count)
 - Mobile friendly
 - Shareable lock URLs
 - Runs entirely in your browser
