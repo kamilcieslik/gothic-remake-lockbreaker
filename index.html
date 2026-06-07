@@ -127,6 +127,24 @@
       color: var(--accent-2);
     }
 
+    .section-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .section-heading h2 {
+      margin: 0;
+    }
+
+    .reset-lock-btn {
+      flex: 0 0 auto;
+      padding: 9px 12px;
+      font-size: .92rem;
+    }
+
     .top-controls {
       display: grid;
       grid-template-columns: 1fr;
@@ -269,12 +287,6 @@
       display: flex;
       gap: 8px;
       flex-wrap: wrap;
-      margin-top: 10px;
-    }
-
-    .setup-actions {
-      display: flex;
-      justify-content: flex-start;
       margin-top: 10px;
     }
 
@@ -516,6 +528,17 @@
         font-size: 1.08rem;
       }
 
+      .section-heading {
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+
+      .reset-lock-btn {
+        padding: 8px 10px;
+        font-size: .88rem;
+        border-radius: 10px;
+      }
+
       .top-controls {
         gap: 8px;
       }
@@ -587,10 +610,6 @@
         gap: 7px;
       }
 
-      .setup-actions {
-        justify-content: flex-start;
-      }
-
       .button-row .button,
       .button-row button {
         padding: 10px 12px;
@@ -638,7 +657,10 @@
 
   <main>
     <section class="card">
-      <h2>1. Lock setup</h2>
+      <div class="section-heading">
+        <h2>1. Lock setup</h2>
+        <button class="secondary reset-lock-btn" id="resetBtn" type="button">Reset lock</button>
+      </div>
       <div class="top-controls">
         <div>
           <label for="lockName">Lock name</label>
@@ -653,10 +675,6 @@
             <button type="button" class="plate-count-btn" data-plates="7">7</button>
           </div>
         </div>
-      </div>
-
-      <div class="setup-actions">
-        <button class="secondary" id="resetBtn" type="button">Reset lock</button>
       </div>
 
       <p class="hint">
