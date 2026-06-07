@@ -14,6 +14,7 @@ The app solves lockpicking puzzles from Gothic Remake.
 
 The lock consists of plates.
 
+- The app currently supports 4, 5, 6 and 7 plate locks.
 - Plate 1 is the bottom plate.
 - Plate N is the top plate.
 - UI for plate positions should display plates top-to-bottom: Plate N, ..., Plate 1.
@@ -45,34 +46,89 @@ When a plate is moved:
    - Opposite = -delta
 3. If any resulting position is outside [-3, +3], reject the move.
 
-## Solver algorithm
+## Solver algorithms
 
-The solver uses BFS over the state graph with a shared priority queue.
+The app has four algorithm modes.
 
-- State is an array of plate positions.
-- Goal is all zeroes.
-- Edges are valid moves: each plate × left/right.
-- BFS explores states with equal cost priority; cost is calculated differently depending on the selected algorithm mode:
-  - **Fewer plate switches** (default, standard): prioritizes fewer plate switches (groups of moves), then fewest total moves.
-  - **Fewer plate switches (fast)**: quick heuristic for faster computation, less optimized.
-  - **Shortest moves** (standard): prioritizes fewest total moves, then fewer plate switches as tiebreaker.
-  - **Shortest moves (fast)**: quick heuristic for fastest shortest-move computation.
+### Fewer plate switches
+
+Default mode.
+
+- Uses priority-based graph search.
+- Prioritizes fewer plate switches / grouped move lines.
+- Uses total move count as the secondary criterion.
+- Usually produces solutions that are easier to follow in-game.
+- May use more individual moves than the shortest-move modes.
+- May take longer than fast modes.
+
+Cost order:
+
+1. fewer groups / plate switches
+2. fewer individual moves
+
+### Fewer plate switches (fast)
+
+Fast fallback for easier-to-follow solutions.
+
+- Uses a simpler grouped-search approach.
+- Focuses on reducing plate switches.
+- Usually easier to follow than strict shortest-move output.
+- Less optimized than the full Fewer plate switches mode.
+- Useful when the full mode takes too long on slower devices.
+
+### Shortest moves
+
+Optimized shortest-move mode.
+
+- Uses priority-based graph search.
+- Guarantees the lowest number of individual moves.
+- Uses fewer plate switches as a tie-breaker when several shortest solutions exist.
+- May take longer than fast modes.
+
+Cost order:
+
+1. fewer individual moves
+2. fewer groups / plate switches
+
+### Shortest moves (fast)
+
+Fast strict shortest-move fallback.
+
+- Uses classic BFS with parent pointers.
+- Guarantees the lowest number of individual moves.
+- Does not optimize plate switches as a tie-breaker.
+- May switch between plates more often.
+- Useful when solving takes too long or times out.
+
+## Solver implementation notes
+
 - The solver runs in a Web Worker to avoid freezing the UI during long computations.
+- The app shows a loading overlay with a minimum display time to avoid flicker on easy locks.
+- The timeout is currently 30 seconds.
+- Timeout should not freeze the browser.
+- Timeout does not necessarily mean the puzzle is impossible. It may mean:
+  - the selected mode is too expensive,
+  - the device/browser is too slow,
+  - the entered lock setup is incorrect,
+  - or the puzzle is impossible.
+- Timeout/error messages should suggest trying one of the fast modes.
 - Do not replace priority queue search with a heuristic unless there is a strong reason.
-- Avoid changes that can freeze the browser for large plate counts.
+- Avoid changes that can freeze the browser for large or complex locks.
 
-Pseudocode:
+Simplified shortest-move BFS pseudocode:
 
-solve(start):
+```text
+solveFastShortestMoves(start):
     goal = [0, 0, ..., 0]
-    queue = [(start, [])]
+    queue = [start]
     visited = {start}
+    parents = {}
 
     while queue not empty:
-        state, moves = queue.pop_front()
+        state = queue.pop_front()
 
         if state == goal:
-            return moves
+            return rebuildPath(parents)
 
         for plate in plates:
             for direction in [left, right]:
@@ -83,9 +139,35 @@ solve(start):
 
                 if next not visited:
                     visited.add(next)
-                    queue.push((next, moves + move))
+                    parents[next] = (state, move)
+                    queue.push(next)
 
     return no solution
+```
+
+Simplified priority-search idea:
+
+```text
+solveWithPriority(start, mode):
+    priorityQueue = [startNode]
+    bestCost = {start + lastMove: cost}
+
+    while priorityQueue not empty:
+        node = priorityQueue.pop_best_by_mode()
+
+        if node.state == goal:
+            return rebuildPath(node)
+
+        for each valid move:
+            nextCost = calculateCost(node, move, mode)
+            nextKey = nextState + lastMove
+
+            if nextKey has no better or equal cost:
+                save parent
+                push next node
+
+    return no solution
+```
 
 ## Current app scope
 
@@ -108,16 +190,23 @@ Prefer simple code over clever abstractions.
 
 ## Current features
 
-- Select plate count
+- Choose plate count using 4 / 5 / 6 / 7 buttons
 - Set initial plate positions
 - Define interactions between plates
-- Solve lock (with 30-second timeout protection and async Web Worker)
-- Four algorithm modes: Fewer plate switches (standard and fast) and Shortest moves (standard and fast)
+- Solve lock with 30-second timeout protection and async Web Worker
+- Four algorithm modes:
+  - Fewer plate switches
+  - Fewer plate switches (fast)
+  - Shortest moves
+  - Shortest moves (fast)
 - Copy solution to clipboard
 - Share lock setup via URL
-- Keyboard shortcut (Enter in lock name field to solve)
-- Accessibility (aria-labels for screen readers)
-- Reset
+- Keyboard shortcut: Enter in lock name field to solve
+- Accessibility: aria-labels for screen readers
+- Reset lock
+  - clears lock name, positions, interactions, result, share info and URL
+  - preserves the currently selected plate count
+  - preserves the selected algorithm mode
 - SEO metadata
 - FAQ section
 - robots.txt and sitemap.xml
@@ -138,6 +227,8 @@ Prioritize:
 - avoid features that imply heavy maintenance obligations
 
 Do not add intrusive popups, ads, login, donation prompts, tracking prompts, or complex onboarding.
+
+If optional support links are ever added, keep them subtle, neutral and author-focused, e.g. "Support my work", not as a primary CTA and not as a promise of support or maintenance.
 
 ## Wording
 
@@ -173,18 +264,26 @@ A small “View source” link is fine.
 Be careful with increasing max plate count.
 
 Known:
+- 4, 5, 6 and 7 plate locks are the current supported range.
 - 7-plate locks exist.
 - Higher counts are not confirmed unless a user provides evidence.
+- 1-3 plate locks are currently not supported in the UI because they are not expected in the game.
 
-Because the solver uses BFS, large plate counts can become expensive and may consume significant resources.
+Because some solver modes use priority-based graph search and BFS-style traversal, large plate counts can become expensive and may consume significant resources.
 
 If supporting more than 7 plates:
 - ask whether such locks are confirmed in the game,
 - consider adding a hard max,
 - consider showing a warning,
-- ✅ **DONE**: 30-second timeout (SOLVE_TIMEOUT_MS) with Web Worker prevents browser freezing,
-- ✅ **DONE**: Loading overlay with minimum display time provides visual feedback,
+- keep Web Worker protection,
+- keep timeout protection,
 - do not blindly set max to 20 without further safeguards.
+
+Already implemented safeguards:
+- 30-second timeout (`SOLVE_TIMEOUT_MS`)
+- Web Worker to prevent browser freezing
+- loading overlay with minimum display time
+- fast algorithm modes for slower devices or expensive locks
 
 ## PR review guidance
 
@@ -219,10 +318,11 @@ Someone proposed:
 - desktop layout changes.
 
 Assessment:
-- Copy solution could be useful for sharing exact move sequences on Discord/Steam/Reddit.
+- Copy solution is useful and has been added.
 - Interactive step tracking is questionable because most players solve a lock once and move on.
-- 20 plates is not confirmed and may be risky for BFS performance.
-- Changing dropdown to free numeric input may reduce UX clarity.
+- 20 plates is not confirmed and may be risky for solver performance.
+- Changing plate count to free numeric input may reduce UX clarity.
+- Current UX intentionally uses explicit 4 / 5 / 6 / 7 buttons instead of a dropdown or free numeric input.
 - Avoid mixing unrelated changes in one PR.
 
 ## Suggested README contributing note
@@ -251,13 +351,23 @@ Gothic Remake Lockbreaker is a fan-made project and is not affiliated with, endo
 - Preserve existing behavior unless intentionally changing it.
 - Preserve accessibility: use aria-labels for interactive elements.
 - Preserve keyboard navigation: test Enter and Tab keys in all new interactive features.
-- Test manually after changes:
-  - 1 plate
-  - 5 plates
-  - 7 plates
-  - already solved state
-  - no-solution state
-  - share link load
-  - mobile viewport
-  - desktop viewport
-  - timeout scenario (try unsolvable puzzle)
+- Keep Web Worker solving responsive.
+- Avoid long synchronous solver work on the main thread.
+
+Manual testing checklist:
+- 4 plates
+- 5 plates
+- 6 plates
+- 7 plates
+- switching between all algorithm modes
+- already solved state
+- no-solution state
+- timeout scenario
+- fast modes after timeout
+- reset lock preserves selected plate count
+- reset lock clears positions/interactions/result/share URL
+- share link load
+- invalid old share link with 1-3 plates
+- mobile viewport
+- desktop viewport
+- keyboard navigation with Enter and Tab

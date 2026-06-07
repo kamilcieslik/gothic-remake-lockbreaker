@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <title>Gothic Remake Lockpick Solver - Solve Lockpicking Puzzles Online</title>
-  <meta name="description" content="Free Gothic Remake lockpick solver. Solve lockpicking puzzles with algorithm modes for fewer plate switches, shortest moves, and faster solving. Supports 1-7 plate locks." />
+  <meta name="description" content="Free Gothic Remake lockpick solver. Solve lockpicking puzzles with algorithm modes for fewer plate switches, shortest moves, and faster solving. Supports 4-7 plate locks." />
   <meta name="theme-color" content="#130e0a" />
 
   <!-- Open Graph / social preview -->
@@ -133,6 +133,29 @@
       gap: 10px;
     }
 
+    .plate-count-buttons {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 6px;
+    }
+
+    .plate-count-btn {
+      min-width: 0;
+      padding: 11px 0;
+      background: #100c09;
+      color: var(--text);
+      border: 1px solid var(--border);
+      box-shadow: none;
+      font-weight: 900;
+    }
+
+    .plate-count-btn.active {
+      background: linear-gradient(180deg, var(--accent-2), var(--accent));
+      color: #140d06;
+      border-color: var(--accent);
+      box-shadow: 0 4px 0 #7c4a14;
+    }
+
     label {
       color: var(--muted);
       font-size: .92rem;
@@ -246,6 +269,12 @@
       display: flex;
       gap: 8px;
       flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    .setup-actions {
+      display: flex;
+      justify-content: flex-start;
       margin-top: 10px;
     }
 
@@ -499,6 +528,15 @@
         padding: 10px 11px;
       }
 
+      .plate-count-buttons {
+        gap: 5px;
+      }
+
+      .plate-count-btn {
+        padding: 10px 0;
+        border-radius: 10px;
+      }
+
       .hint {
         font-size: .88rem;
         line-height: 1.38;
@@ -549,6 +587,10 @@
         gap: 7px;
       }
 
+      .setup-actions {
+        justify-content: flex-start;
+      }
+
       .button-row .button,
       .button-row button {
         padding: 10px 12px;
@@ -574,7 +616,7 @@
       }
 
       .top-controls {
-        grid-template-columns: 1fr 180px;
+        grid-template-columns: 1fr 220px;
       }
     }
   </style>
@@ -603,17 +645,18 @@
           <input id="lockName" placeholder="e.g. Old Mine chest" maxlength="80" />
         </div>
         <div>
-          <label for="plateCount">Plates</label>
-          <select id="plateCount">
-            <option>1</option>
-            <option>2</option>
-            <option>3</option>
-            <option>4</option>
-            <option selected>5</option>
-            <option>6</option>
-            <option>7</option>
-          </select>
+          <label id="plateCountLabel">Plates</label>
+          <div id="plateCount" class="plate-count-buttons" role="group" aria-labelledby="plateCountLabel">
+            <button type="button" class="plate-count-btn" data-plates="4">4</button>
+            <button type="button" class="plate-count-btn" data-plates="5">5</button>
+            <button type="button" class="plate-count-btn" data-plates="6">6</button>
+            <button type="button" class="plate-count-btn" data-plates="7">7</button>
+          </div>
         </div>
+      </div>
+
+      <div class="setup-actions">
+        <button class="secondary" id="resetBtn" type="button">Reset lock</button>
       </div>
 
       <p class="hint">
@@ -656,7 +699,6 @@
       <div class="button-row">
         <button class="secondary" id="copyBtn">Copy solution</button>
         <button class="secondary" id="shareBtn">Create share link</button>
-        <button class="secondary" id="resetBtn">Reset</button>
       </div>
       <div id="shareInfo" class="small-note"></div>
     </section>
@@ -670,9 +712,9 @@
         By default, the solver prioritizes reducing plate switches for easier in-game execution. You can also choose a shortest-move mode or a faster mode for slower devices.
       </p>
 
-      <h3>Does this solver work for 7-plate locks?</h3>
+      <h3>What plate counts are supported?</h3>
       <p>
-        Yes. The solver supports Gothic Remake lockpicking puzzles with 1 to 7 plates.
+        The solver supports Gothic Remake lockpicking puzzles with 4 to 7 plates.
       </p>
 
       <h3>What do “Same” and “Opp.” mean?</h3>
@@ -826,7 +868,7 @@
     }
 
     function normalizeStateForN() {
-      state.n = Math.max(1, Math.min(7, Number(state.n) || 5));
+      state.n = Math.max(4, Math.min(7, Number(state.n) || 5));
 
       for (let i = 1; i <= state.n; i++) {
         if (state.start[i] === undefined) state.start[i] = 0;
@@ -850,10 +892,18 @@
 
     function render() {
       normalizeStateForN();
-      plateCount.value = String(state.n);
+      updatePlateCountButtons();
       lockName.value = state.name || "";
       renderPlates();
       renderMatrix();
+    }
+
+    function updatePlateCountButtons() {
+      plateCount.querySelectorAll(".plate-count-btn").forEach(btn => {
+        const isActive = Number(btn.dataset.plates) === state.n;
+        btn.classList.toggle("active", isActive);
+        btn.setAttribute("aria-pressed", isActive ? "true" : "false");
+      });
     }
 
     function renderPlates() {
@@ -1436,7 +1486,7 @@
 
     function loadCompactSetup(payload) {
       if (!payload || payload.v !== 1) throw new Error("Unsupported setup format.");
-      if (!Number.isInteger(payload.n) || payload.n < 1 || payload.n > 7) throw new Error("Invalid plate count.");
+      if (!Number.isInteger(payload.n) || payload.n < 4 || payload.n > 7) throw new Error("Invalid plate count.");
 
       state.n = payload.n;
       state.name = typeof payload.name === "string" ? payload.name.slice(0, 80) : "";
@@ -1505,12 +1555,19 @@
     }
 
     function resetAll() {
-      const fresh = defaultState();
-      state.n = fresh.n;
-      state.name = fresh.name;
-      state.start = fresh.start;
-      state.effects = fresh.effects;
+      const currentN = state.n;
+
+      state.n = currentN;
+      state.name = "";
+      state.start = {};
+      state.effects = {};
       state.lastMoves = "";
+
+      for (let i = 1; i <= currentN; i++) {
+        state.start[i] = 0;
+        state.effects[i] = {};
+      }
+
       resultEl.innerHTML = "Enter lock data and press Solve.";
       shareInfo.textContent = "";
       history.replaceState(null, "", location.pathname);
@@ -1531,8 +1588,11 @@
       }[char]));
     }
 
-    plateCount.addEventListener("change", () => {
-      state.n = Number(plateCount.value);
+    plateCount.addEventListener("click", (event) => {
+      const btn = event.target.closest(".plate-count-btn");
+      if (!btn) return;
+
+      state.n = Number(btn.dataset.plates);
       render();
       clearShareMessage();
     });
