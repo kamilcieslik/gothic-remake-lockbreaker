@@ -47,13 +47,15 @@ When a plate is moved:
 
 ## Solver algorithm
 
-The solver uses BFS over the state graph.
+The solver uses BFS over the state graph with a shared priority queue.
 
 - State is an array of plate positions.
 - Goal is all zeroes.
 - Edges are valid moves: each plate × left/right.
-- BFS is used because every move has equal cost and we want the shortest valid solution.
-- Do not replace BFS with a heuristic unless there is a strong reason.
+- BFS explores states with equal cost priority; cost is calculated differently depending on the selected algorithm mode:
+  - **Fewer plate switches** (default): prioritizes fewer plate switches (groups of moves), then fewest total moves.
+  - **Shortest moves**: prioritizes fewest total moves, then fewer plate switches as tiebreaker.
+- Do not replace priority queue search with a heuristic unless there is a strong reason.
 - Avoid changes that can freeze the browser for large plate counts.
 
 Pseudocode:
@@ -105,7 +107,7 @@ Prefer simple code over clever abstractions.
 - Set initial plate positions
 - Define interactions between plates
 - Solve lock (with 15-second timeout protection)
-- Two algorithm modes: Fewer plate switches (default) and Shortest moves (with move grouping: "x3", "x2", etc.)
+- Two algorithm modes: Fewer plate switches (default, prioritizes fewer plate switches) and Shortest moves (prioritizes minimum move count)
 - Copy solution to clipboard
 - Share lock setup via URL
 - Keyboard shortcut (Enter in lock name field to solve)

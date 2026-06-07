@@ -617,8 +617,8 @@
 
       <h3>What is the difference between algorithm modes?</h3>
       <p>
-        “Fewer plate switches” tries to reduce how often you switch between plates, which can make the solution easier to follow, but it may use more moves.
-        “Shortest moves” finds the solution with the lowest number of individual moves.
+        “Fewer plate switches” prioritizes reducing how often you switch between plates, which can make the solution easier to follow, but it may use more moves.
+        “Shortest moves” guarantees the lowest number of individual moves and, when possible, prefers the shortest solution with fewer plate switches.
       </p>
 
       <h3>Can I share the solution with others?</h3>
@@ -705,10 +705,10 @@
 
       if (getSolveMode() === "shortest") {
         solveModeDescription.textContent =
-          "Finds the solution with the lowest number of individual moves. This is the strict shortest-path solver.";
+          "Guarantees the lowest number of individual moves and prefers fewer plate switches when several shortest solutions exist.";
       } else {
         solveModeDescription.textContent =
-          "Tries to reduce how often you switch between plates, making the solution easier to follow in-game. It may use more individual moves.";
+          "Prioritizes fewer plate switches, making the solution easier to follow in-game. It may use more individual moves.";
       }
     }
 
@@ -912,27 +912,111 @@
       return next;
     }
 
-    function buildSolution(goalIndex, states, parents) {
+    function moveKeyOf(move) {
+      return move ? `${move.plate}:${move.direction}` : "";
+    }
+
+    function searchKeyOf(values, lastMoveKey) {
+      return `${keyOf(values)}|${lastMoveKey || "start"}`;
+    }
+
+    function compareCosts(a, b, mode) {
+      if (mode === "shortest") {
+        if (a.moves !== b.moves) return a.moves - b.moves;
+        if (a.groups !== b.groups) return a.groups - b.groups;
+      } else {
+        if (a.groups !== b.groups) return a.groups - b.groups;
+        if (a.moves !== b.moves) return a.moves - b.moves;
+      }
+
+      return 0;
+    }
+
+    function hasSameCost(a, b) {
+      return !!a && !!b && a.moves === b.moves && a.groups === b.groups;
+    }
+
+    function createPriorityQueue(compare) {
+      const items = [];
+
+      function swap(a, b) {
+        const tmp = items[a];
+        items[a] = items[b];
+        items[b] = tmp;
+      }
+
+      function bubbleUp(index) {
+        while (index > 0) {
+          const parent = Math.floor((index - 1) / 2);
+          if (compare(items[index], items[parent]) >= 0) break;
+          swap(index, parent);
+          index = parent;
+        }
+      }
+
+      function bubbleDown(index) {
+        while (true) {
+          const left = index * 2 + 1;
+          const right = index * 2 + 2;
+          let smallest = index;
+
+          if (left < items.length && compare(items[left], items[smallest]) < 0) {
+            smallest = left;
+          }
+
+          if (right < items.length && compare(items[right], items[smallest]) < 0) {
+            smallest = right;
+          }
+
+          if (smallest === index) break;
+
+          swap(index, smallest);
+          index = smallest;
+        }
+      }
+
+      return {
+        push(value) {
+          items.push(value);
+          bubbleUp(items.length - 1);
+        },
+        pop() {
+          if (items.length === 0) return undefined;
+
+          const first = items[0];
+          const last = items.pop();
+
+          if (items.length > 0) {
+            items[0] = last;
+            bubbleDown(0);
+          }
+
+          return first;
+        },
+        get length() {
+          return items.length;
+        }
+      };
+    }
+
+    function buildSolutionFromNodes(goalIndex, nodes) {
       const moves = [];
       const pathStates = [];
 
       let index = goalIndex;
 
       while (index !== -1) {
-        pathStates.push(states[index]);
+        const node = nodes[index];
+        pathStates.push(node.values);
 
-        const parent = parents[index];
-        if (parent.move) {
-          const count = parent.move.count || 1;
-          for (let i = 0; i < count; i++) {
-            moves.push({
-              plate: parent.move.plate,
-              direction: parent.move.direction
-            });
-          }
+        if (node.move) {
+          moves.push({
+            plate: node.move.plate,
+            direction: node.move.direction
+          });
         }
 
-        index = parent.prev;
+        index = node.prev;
       }
 
       moves.reverse();
@@ -944,7 +1028,7 @@
       };
     }
 
-    function solveShortestMoves() {
+    function solveWithPriority(mode) {
       normalizeStateForN();
 
       const start = [];
@@ -956,43 +1040,76 @@
         return { moves: [], states: [start] };
       }
 
-      const states = [start];
-      const parents = [{ prev: -1, move: null }];
-      const queue = [0];
-      const seen = new Map([[keyOf(start), 0]]);
+      const nodes = [{
+        values: start,
+        prev: -1,
+        move: null,
+        moves: 0,
+        groups: 0,
+        lastMoveKey: ""
+      }];
 
-      let head = 0;
+      const best = new Map([
+        [searchKeyOf(start, ""), { moves: 0, groups: 0 }]
+      ]);
+
+      const queue = createPriorityQueue((a, b) => {
+        const result = compareCosts(nodes[a], nodes[b], mode);
+        return result !== 0 ? result : a - b;
+      });
+
+      queue.push(0);
+
       const startTime = Date.now();
 
-      while (head < queue.length) {
+      while (queue.length > 0) {
         if (Date.now() - startTime > SOLVE_TIMEOUT_MS) {
           return { timeout: true };
         }
 
-        const currentIndex = queue[head++];
-        const currentValues = states[currentIndex];
+        const currentIndex = queue.pop();
+        const current = nodes[currentIndex];
+        const currentKey = searchKeyOf(current.values, current.lastMoveKey);
+        const currentBest = best.get(currentKey);
+
+        if (!hasSameCost(current, currentBest)) {
+          continue;
+        }
+
+        if (isGoal(current.values)) {
+          return buildSolutionFromNodes(currentIndex, nodes);
+        }
 
         for (let plate = 1; plate <= state.n; plate++) {
           for (const direction of ["left", "right"]) {
-            const nextValues = applyMove(currentValues, plate, direction);
+            const nextValues = applyMove(current.values, plate, direction);
             if (!nextValues) continue;
 
-            const key = keyOf(nextValues);
-            if (seen.has(key)) continue;
-
             const move = { plate, direction };
-            const nextIndex = states.length;
+            const nextMoveKey = moveKeyOf(move);
+            const nextCost = {
+              moves: current.moves + 1,
+              groups: current.groups + (current.lastMoveKey === nextMoveKey ? 0 : 1)
+            };
 
-            seen.set(key, nextIndex);
-            states.push(nextValues);
-            parents.push({
-              prev: currentIndex,
-              move
-            });
+            const nextKey = searchKeyOf(nextValues, nextMoveKey);
+            const previousBest = best.get(nextKey);
 
-            if (isGoal(nextValues)) {
-              return buildSolution(nextIndex, states, parents);
+            if (previousBest && compareCosts(nextCost, previousBest, mode) >= 0) {
+              continue;
             }
+
+            const nextIndex = nodes.length;
+
+            best.set(nextKey, nextCost);
+            nodes.push({
+              values: nextValues,
+              prev: currentIndex,
+              move,
+              moves: nextCost.moves,
+              groups: nextCost.groups,
+              lastMoveKey: nextMoveKey
+            });
 
             queue.push(nextIndex);
           }
@@ -1002,69 +1119,12 @@
       return null;
     }
 
+    function solveShortestMoves() {
+      return solveWithPriority("shortest");
+    }
+
     function solveFewerPlateSwitches() {
-      normalizeStateForN();
-
-      const start = [];
-      for (let i = 1; i <= state.n; i++) {
-        start.push(state.start[i]);
-      }
-
-      if (isGoal(start)) {
-        return { moves: [], states: [start] };
-      }
-
-      const states = [start];
-      const parents = [{ prev: -1, move: null }];
-      const queue = [0];
-      const seen = new Map([[keyOf(start), 0]]);
-
-      let head = 0;
-      const startTime = Date.now();
-
-      while (head < queue.length) {
-        if (Date.now() - startTime > SOLVE_TIMEOUT_MS) {
-          return { timeout: true };
-        }
-
-        const currentIndex = queue[head++];
-        const currentValues = states[currentIndex];
-
-        for (let plate = 1; plate <= state.n; plate++) {
-          for (const direction of ["left", "right"]) {
-            let chainValues = currentValues;
-
-            for (let count = 1; ; count++) {
-              chainValues = applyMove(chainValues, plate, direction);
-              if (!chainValues) break;
-
-              const key = keyOf(chainValues);
-              if (seen.has(key)) continue;
-
-              const nextIndex = states.length;
-
-              seen.set(key, nextIndex);
-              states.push(chainValues);
-              parents.push({
-                prev: currentIndex,
-                move: {
-                  plate,
-                  direction,
-                  count
-                }
-              });
-
-              if (isGoal(chainValues)) {
-                return buildSolution(nextIndex, states, parents);
-              }
-
-              queue.push(nextIndex);
-            }
-          }
-        }
-      }
-
-      return null;
+      return solveWithPriority("fewer-switches");
     }
 
     function solve() {
