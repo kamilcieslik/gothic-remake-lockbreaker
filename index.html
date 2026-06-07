@@ -180,6 +180,64 @@
       font-weight: 700;
     }
 
+    button:disabled {
+      opacity: .72;
+      filter: grayscale(.15);
+    }
+
+    .solving-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(5, 3, 2, .72);
+      backdrop-filter: blur(2px);
+    }
+
+    .solving-overlay.active {
+      display: flex;
+    }
+
+    .solving-box {
+      width: min(420px, 100%);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(36,27,21,.98), rgba(16,12,9,.98));
+      box-shadow: 0 18px 50px rgba(0,0,0,.55);
+      padding: 24px 18px;
+      text-align: center;
+    }
+
+    .spinner {
+      width: 44px;
+      height: 44px;
+      margin: 0 auto 14px;
+      border: 4px solid rgba(255,208,115,.22);
+      border-top-color: var(--accent-2);
+      border-radius: 50%;
+      animation: spin .85s linear infinite;
+    }
+
+    .solving-title {
+      color: var(--accent-2);
+      font-weight: 900;
+      font-size: 1.1rem;
+      margin-bottom: 6px;
+    }
+
+    .solving-text {
+      color: var(--muted);
+      line-height: 1.45;
+      font-size: .94rem;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
     .button-row {
       display: flex;
       gap: 8px;
@@ -518,6 +576,13 @@
   </style>
 </head>
 <body>
+  <div id="solvingOverlay" class="solving-overlay" aria-hidden="true">
+    <div class="solving-box" role="status" aria-live="polite">
+      <div class="spinner" aria-hidden="true"></div>
+      <div class="solving-title">Solving lock...</div>
+      <div class="solving-text">This may take a few seconds.</div>
+    </div>
+  </div>
   <header>
     <div class="logo">🔓 Gothic Remake Lockbreaker</div>
     <p class="subtitle">
@@ -661,6 +726,7 @@
     const MAX = 3;
     const POSITIONS = [-3, -2, -1, 0, 1, 2, 3];
     const SOLVE_TIMEOUT_MS = 15000;
+    const MIN_SOLVING_OVERLAY_MS = 1000;
     const SOLVE_MODE_STORAGE_KEY = "gothic-remake-lockbreaker-solve-mode";
 
     const defaultState = () => ({
@@ -681,6 +747,7 @@
     const shareInfo = document.getElementById("shareInfo");
     const solveMode = document.getElementById("solveMode");
     const solveModeDescription = document.getElementById("solveModeDescription");
+    const solvingOverlay = document.getElementById("solvingOverlay");
 
     function initRepoLinks() {
       const ids = ["repoTopLink", "starRepoLink", "repoLink"];
@@ -1329,21 +1396,392 @@
       }
     });
 
-    document.getElementById("solveBtn").addEventListener("click", () => {
+    function setSolvingState(isActive) {
       const btn = document.getElementById("solveBtn");
-      const originalText = btn.textContent;
-      
-      btn.textContent = "Solving...";
-      btn.disabled = true;
-      
+
+      if (btn) {
+        btn.textContent = isActive ? "Solving..." : "Solve lock";
+        btn.disabled = isActive;
+      }
+
+      if (solvingOverlay) {
+        solvingOverlay.classList.toggle("active", isActive);
+        solvingOverlay.setAttribute("aria-hidden", isActive ? "false" : "true");
+      }
+
+      document.body.classList.toggle("solving", isActive);
+    }
+
+    function createSolverWorker() {
+      const workerSource = `
+        const MIN = -3;
+        const MAX = 3;
+
+        self.onmessage = function(event) {
+          try {
+            const payload = event.data;
+            const result = solveWithPriority(
+              payload.n,
+              payload.start,
+              payload.effects,
+              payload.mode,
+              payload.timeoutMs
+            );
+            self.postMessage(result);
+          } catch (error) {
+            self.postMessage({
+              error: error && error.message ? error.message : "Solver worker failed."
+            });
+          }
+        };
+
+        function keyOf(values) {
+          return values.join(",");
+        }
+
+        function isGoal(values) {
+          return values.every(function(value) {
+            return value === 0;
+          });
+        }
+
+        function applyMove(values, plate, direction, effects) {
+          const delta = direction === "left" ? 1 : -1;
+          const next = values.slice();
+
+          function add(index, amount) {
+            next[index - 1] += amount;
+          }
+
+          add(plate, delta);
+
+          const row = effects[plate - 1] || [];
+
+          for (let target = 1; target <= values.length; target++) {
+            if (target === plate) continue;
+
+            const relation = Number(row[target - 1] || 0);
+            if (relation === 0) continue;
+
+            const amount = relation === 1 ? delta : -delta;
+            add(target, amount);
+          }
+
+          if (next.some(function(value) {
+            return value < MIN || value > MAX;
+          })) {
+            return null;
+          }
+
+          return next;
+        }
+
+        function moveKeyOf(move) {
+          return move ? move.plate + ":" + move.direction : "";
+        }
+
+        function searchKeyOf(values, lastMoveKey) {
+          return keyOf(values) + "|" + (lastMoveKey || "start");
+        }
+
+        function compareCosts(a, b, mode) {
+          if (mode === "shortest") {
+            if (a.moves !== b.moves) return a.moves - b.moves;
+            if (a.groups !== b.groups) return a.groups - b.groups;
+          } else {
+            if (a.groups !== b.groups) return a.groups - b.groups;
+            if (a.moves !== b.moves) return a.moves - b.moves;
+          }
+
+          return 0;
+        }
+
+        function hasSameCost(a, b) {
+          return !!a && !!b && a.moves === b.moves && a.groups === b.groups;
+        }
+
+        function createPriorityQueue(compare) {
+          const items = [];
+
+          function swap(a, b) {
+            const tmp = items[a];
+            items[a] = items[b];
+            items[b] = tmp;
+          }
+
+          function bubbleUp(index) {
+            while (index > 0) {
+              const parent = Math.floor((index - 1) / 2);
+              if (compare(items[index], items[parent]) >= 0) break;
+              swap(index, parent);
+              index = parent;
+            }
+          }
+
+          function bubbleDown(index) {
+            while (true) {
+              const left = index * 2 + 1;
+              const right = index * 2 + 2;
+              let smallest = index;
+
+              if (left < items.length && compare(items[left], items[smallest]) < 0) {
+                smallest = left;
+              }
+
+              if (right < items.length && compare(items[right], items[smallest]) < 0) {
+                smallest = right;
+              }
+
+              if (smallest === index) break;
+
+              swap(index, smallest);
+              index = smallest;
+            }
+          }
+
+          return {
+            push: function(value) {
+              items.push(value);
+              bubbleUp(items.length - 1);
+            },
+            pop: function() {
+              if (items.length === 0) return undefined;
+
+              const first = items[0];
+              const last = items.pop();
+
+              if (items.length > 0) {
+                items[0] = last;
+                bubbleDown(0);
+              }
+
+              return first;
+            },
+            get length() {
+              return items.length;
+            }
+          };
+        }
+
+        function buildSolutionFromNodes(goalIndex, nodes) {
+          const moves = [];
+          const pathStates = [];
+
+          let index = goalIndex;
+
+          while (index !== -1) {
+            const node = nodes[index];
+            pathStates.push(node.values);
+
+            if (node.move) {
+              moves.push({
+                plate: node.move.plate,
+                direction: node.move.direction
+              });
+            }
+
+            index = node.prev;
+          }
+
+          moves.reverse();
+          pathStates.reverse();
+
+          return {
+            moves: moves,
+            states: pathStates
+          };
+        }
+
+        function solveWithPriority(n, start, effects, mode, timeoutMs) {
+          if (isGoal(start)) {
+            return {
+              moves: [],
+              states: [start]
+            };
+          }
+
+          const nodes = [{
+            values: start,
+            prev: -1,
+            move: null,
+            moves: 0,
+            groups: 0,
+            lastMoveKey: ""
+          }];
+
+          const best = new Map([
+            [searchKeyOf(start, ""), {
+              moves: 0,
+              groups: 0
+            }]
+          ]);
+
+          const queue = createPriorityQueue(function(a, b) {
+            const result = compareCosts(nodes[a], nodes[b], mode);
+            return result !== 0 ? result : a - b;
+          });
+
+          queue.push(0);
+
+          const startTime = Date.now();
+
+          while (queue.length > 0) {
+            if (Date.now() - startTime > timeoutMs) {
+              return {
+                timeout: true
+              };
+            }
+
+            const currentIndex = queue.pop();
+            const current = nodes[currentIndex];
+            const currentKey = searchKeyOf(current.values, current.lastMoveKey);
+            const currentBest = best.get(currentKey);
+
+            if (!hasSameCost(current, currentBest)) {
+              continue;
+            }
+
+            if (isGoal(current.values)) {
+              return buildSolutionFromNodes(currentIndex, nodes);
+            }
+
+            for (let plate = 1; plate <= n; plate++) {
+              for (const direction of ["left", "right"]) {
+                const nextValues = applyMove(current.values, plate, direction, effects);
+                if (!nextValues) continue;
+
+                const move = {
+                  plate: plate,
+                  direction: direction
+                };
+
+                const nextMoveKey = moveKeyOf(move);
+                const nextCost = {
+                  moves: current.moves + 1,
+                  groups: current.groups + (current.lastMoveKey === nextMoveKey ? 0 : 1)
+                };
+
+                const nextKey = searchKeyOf(nextValues, nextMoveKey);
+                const previousBest = best.get(nextKey);
+
+                if (previousBest && compareCosts(nextCost, previousBest, mode) >= 0) {
+                  continue;
+                }
+
+                const nextIndex = nodes.length;
+
+                best.set(nextKey, nextCost);
+                nodes.push({
+                  values: nextValues,
+                  prev: currentIndex,
+                  move: move,
+                  moves: nextCost.moves,
+                  groups: nextCost.groups,
+                  lastMoveKey: nextMoveKey
+                });
+
+                queue.push(nextIndex);
+              }
+            }
+          }
+
+          return null;
+        }
+      `;
+
+      const blob = new Blob([workerSource], { type: "text/javascript" });
+      const workerUrl = URL.createObjectURL(blob);
+      const worker = new Worker(workerUrl);
+
+      worker.releaseUrl = function() {
+        URL.revokeObjectURL(workerUrl);
+      };
+
+      return worker;
+    }
+
+    function solveInWorker() {
+      if (!window.Worker) {
+        return Promise.resolve(solve());
+      }
+
+      const setup = compactSetup();
+      const payload = {
+        n: setup.n,
+        start: setup.start,
+        effects: setup.effects,
+        mode: getSolveMode(),
+        timeoutMs: SOLVE_TIMEOUT_MS
+      };
+
+      return new Promise((resolve, reject) => {
+        const worker = createSolverWorker();
+
+        const hardTimeout = setTimeout(() => {
+          worker.terminate();
+          worker.releaseUrl();
+          resolve({ timeout: true });
+        }, SOLVE_TIMEOUT_MS + 1000);
+
+        worker.onmessage = (event) => {
+          clearTimeout(hardTimeout);
+          worker.terminate();
+          worker.releaseUrl();
+
+          if (event.data?.error) {
+            reject(new Error(event.data.error));
+            return;
+          }
+
+          resolve(event.data);
+        };
+
+        worker.onerror = (error) => {
+          clearTimeout(hardTimeout);
+          worker.terminate();
+          worker.releaseUrl();
+          reject(error);
+        };
+
+        worker.postMessage(payload);
+      });
+    }
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    let isSolving = false;
+
+    document.getElementById("solveBtn").addEventListener("click", async () => {
+      if (isSolving) return;
+
+      isSolving = true;
+      setSolvingState(true);
+
+      const startedAt = Date.now();
+
       try {
         state.name = lockName.value.trim();
-        const solution = solve();
+        const solution = await solveInWorker();
+
+        const elapsed = Date.now() - startedAt;
+        if (elapsed < MIN_SOLVING_OVERLAY_MS) {
+          await sleep(MIN_SOLVING_OVERLAY_MS - elapsed);
+        }
+
         resultEl.innerHTML = formatSolution(solution);
         resultEl.scrollIntoView({ behavior: "smooth", block: "center" });
+      } catch (error) {
+        const elapsed = Date.now() - startedAt;
+        if (elapsed < MIN_SOLVING_OVERLAY_MS) {
+          await sleep(MIN_SOLVING_OVERLAY_MS - elapsed);
+        }
+
+        resultEl.innerHTML = `<span class="error">Solver failed:</span> ${escapeHtml(error.message || error)}`;
       } finally {
-        btn.textContent = originalText;
-        btn.disabled = false;
+        setSolvingState(false);
+        isSolving = false;
       }
     });
 
