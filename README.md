@@ -95,6 +95,14 @@ Feel free to open an issue or submit a pull request. This is a small side projec
 
 ---
 
+## Support
+
+If this project helped you, you can support my open-source work through GitHub Sponsors.
+
+Sponsorship is optional and does not unlock paid features or guaranteed support.
+
+---
+
 ## Disclaimer
 
 Gothic Remake Lockbreaker is a fan-made project and is not affiliated with, endorsed by, or sponsored by Alkimia Interactive, THQ Nordic, or the Gothic Remake development team.
