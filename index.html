@@ -492,6 +492,14 @@
       margin-top: 8px;
     }
 
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
 
     @media (max-width: 600px) {
       html, body {
@@ -778,8 +786,9 @@
 
     <div class="footer span-2">
       Runs locally in your browser. No account. No tracking. No data is sent anywhere.
-      <div style="margin-top: 10px;">
+      <div class="footer-links">
         <a class="pill-link" id="repoTopLink" href="#" target="_blank" rel="noopener">⌘ View source</a>
+        <a class="pill-link" id="supportLink" href="#" target="_blank" rel="noopener noreferrer">☕ Support my work</a>
       </div>
     </div>
   </main>
@@ -790,6 +799,7 @@
     const REPO_NAME = "gothic-remake-lockbreaker";
     const REPO_URL = `https://github.com/${REPO_OWNER}/${REPO_NAME}`;
     const ISSUES_URL = `${REPO_URL}/issues`;
+    const SUPPORT_URL = "https://www.buymeacoffee.com/mrfarinq";
 
     const MIN = -3;
     const MAX = 3;
@@ -830,6 +840,9 @@
         const el = document.getElementById(id);
         if (el) el.href = ISSUES_URL;
       });
+
+      const supportLink = document.getElementById("supportLink");
+      if (supportLink) supportLink.href = SUPPORT_URL;
     }
 
     function isValidSolveMode(mode) {
