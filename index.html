@@ -204,7 +204,7 @@
       font-weight: 800;
       cursor: pointer;
       box-shadow: 0 4px 0 #7c4a14;
-      transition: transform .05s ease, filter .15s ease;
+      transition: transform .05s ease;
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -375,8 +375,11 @@
     }
 
     .relation {
-      display: inline-block;
-      min-width: 40px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 42px;
+      min-height: 28px;
       padding: 5px 2px;
       border-radius: 8px;
       border: 1px solid var(--border);
@@ -606,7 +609,8 @@
       }
 
       .relation {
-        min-width: 40px;
+        width: 42px;
+        min-height: 28px;
         padding: 5px 2px;
       }
 
@@ -741,6 +745,12 @@
       <h3>What plate counts are supported?</h3>
       <p>
         The solver supports Gothic Remake lockpicking puzzles with 4 to 7 plates.
+      </p>
+
+      <h3>Does the in-game lockpicking skill change how I use the solver?</h3>
+      <p>
+        No. Higher lockpicking skill levels only reduce the number of dependencies between plates.
+        You use the solver the same way, but entering interactions is usually faster and the final solution often has fewer moves.
       </p>
 
       <h3>What do “Same” and “Opp.” mean?</h3>
@@ -943,6 +953,7 @@
       for (let i = state.n; i >= 1; i--) {
         const row = document.createElement("div");
         row.className = "plate-row";
+        row.dataset.plate = String(i);
 
         const name = document.createElement("div");
         name.className = "plate-name";
@@ -956,11 +967,8 @@
           btn.type = "button";
           btn.className = "pos-btn" + (state.start[i] === pos ? " active" : "");
           btn.textContent = pos > 0 ? `+${pos}` : String(pos);
-          btn.addEventListener("click", () => {
-            state.start[i] = pos;
-            renderPlates();
-            clearShareMessage();
-          });
+          btn.dataset.plate = String(i);
+          btn.dataset.position = String(pos);
           btn.setAttribute("aria-label", `Plate ${i} position ${pos}`);
           buttons.appendChild(btn);
         });
@@ -969,6 +977,15 @@
         row.appendChild(buttons);
         platesEl.appendChild(row);
       }
+    }
+
+    function updatePlatePositionButtons(plate) {
+      const row = platesEl.querySelector(`.plate-row[data-plate="${plate}"]`);
+      if (!row) return;
+
+      row.querySelectorAll(".pos-btn").forEach(btn => {
+        btn.classList.toggle("active", Number(btn.dataset.position) === state.start[plate]);
+      });
     }
 
     function updateRelationButton(btn, value, src, target) {
@@ -1026,15 +1043,10 @@
             btn.textContent = "Self";
             btn.disabled = true;
           } else {
+            btn.dataset.src = String(src);
+            btn.dataset.target = String(target);
             const value = state.effects[src]?.[target] || "none";
             updateRelationButton(btn, value, src, target);
-
-            btn.addEventListener("click", () => {
-              cycleRelation(src, target);
-              const newValue = state.effects[src]?.[target] || "none";
-              updateRelationButton(btn, newValue, src, target);
-              clearShareMessage();
-            });
           }
 
           td.appendChild(btn);
@@ -1618,6 +1630,36 @@
         "'": "&#039;"
       }[char]));
     }
+
+    platesEl.addEventListener("click", (event) => {
+      const btn = event.target.closest(".pos-btn");
+      if (!btn || !platesEl.contains(btn)) return;
+
+      const plate = Number(btn.dataset.plate);
+      const position = Number(btn.dataset.position);
+
+      if (!Number.isInteger(plate) || !Number.isInteger(position)) return;
+      if (state.start[plate] === position) return;
+
+      state.start[plate] = position;
+      updatePlatePositionButtons(plate);
+      clearShareMessage();
+    });
+
+    matrixEl.addEventListener("click", (event) => {
+      const btn = event.target.closest(".relation");
+      if (!btn || !matrixEl.contains(btn) || btn.disabled) return;
+
+      const src = Number(btn.dataset.src);
+      const target = Number(btn.dataset.target);
+
+      if (!Number.isInteger(src) || !Number.isInteger(target)) return;
+
+      cycleRelation(src, target);
+      const newValue = state.effects[src]?.[target] || "none";
+      updateRelationButton(btn, newValue, src, target);
+      clearShareMessage();
+    });
 
     plateCount.addEventListener("click", (event) => {
       const btn = event.target.closest(".plate-count-btn");
