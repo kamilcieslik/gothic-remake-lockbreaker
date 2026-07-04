@@ -267,6 +267,16 @@
       font: inherit;
     }
 
+    button,
+    .button,
+    .pill-link,
+    summary,
+    select,
+    input {
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
     input, select {
       width: 100%;
       background: #100c09;
@@ -953,6 +963,29 @@
     @media (max-width: 1017px) {
       .logo {
         font-size: clamp(2rem, 6.2vw, 3.35rem);
+      }
+    }
+
+    @media (hover: none) {
+      button:hover,
+      .button:hover,
+      .pill-link:hover,
+      .faq-item:hover,
+      .faq-item summary:hover,
+      .mode-picker-trigger:hover,
+      .mode-picker-option:hover,
+      .pos-btn:hover,
+      .plate-count-btn:hover,
+      .relation:hover:not(.disabled) {
+        filter: none;
+      }
+
+      .pill-link:hover,
+      .faq-item:hover,
+      .faq-item summary:hover,
+      .mode-picker-trigger:hover,
+      .mode-picker-option:hover {
+        box-shadow: none;
       }
     }
 
