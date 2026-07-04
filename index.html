@@ -127,6 +127,27 @@
       color: var(--accent-2);
     }
 
+    .step-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .step-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      border-radius: 9px;
+      background: linear-gradient(180deg, var(--accent-2), var(--accent));
+      color: #140d06;
+      font-size: .95rem;
+      font-weight: 900;
+      box-shadow: 0 3px 0 #7c4a14;
+      flex: 0 0 auto;
+    }
+
     .section-heading {
       display: flex;
       align-items: center;
@@ -139,10 +160,22 @@
       margin: 0;
     }
 
-    .reset-lock-btn {
+    button.secondary.reset-lock-btn {
       flex: 0 0 auto;
       padding: 9px 12px;
       font-size: .92rem;
+      color: #ffd8cf;
+      background: linear-gradient(180deg, #4a2018, #32150f);
+      border-color: rgba(215,107,85,.72);
+      box-shadow: 0 3px 0 #1f0d09;
+      font-weight: 800;
+    }
+
+    button.secondary.reset-lock-btn:hover,
+    button.secondary.reset-lock-btn:focus-visible {
+      color: #ffe6df;
+      background: linear-gradient(180deg, #5a261d, #3b1812);
+      border-color: var(--danger);
     }
 
     .top-controls {
@@ -552,12 +585,23 @@
         font-size: 1.08rem;
       }
 
+      .step-title {
+        gap: 8px;
+      }
+
+      .step-badge {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        font-size: .9rem;
+      }
+
       .section-heading {
         gap: 10px;
         margin-bottom: 12px;
       }
 
-      .reset-lock-btn {
+      button.secondary.reset-lock-btn {
         padding: 8px 10px;
         font-size: .88rem;
         border-radius: 10px;
@@ -690,7 +734,7 @@
   <main>
     <section class="card">
       <div class="section-heading">
-        <h2>1. Lock setup</h2>
+        <h2 class="step-title"><span class="step-badge">1</span>Lock setup</h2>
         <button class="secondary reset-lock-btn" id="resetBtn" type="button">Reset lock</button>
       </div>
       <div class="top-controls">
@@ -718,7 +762,7 @@
     </section>
 
     <section class="card">
-      <h2>2. Interactions</h2>
+      <h2 class="step-title"><span class="step-badge">2</span>Interactions</h2>
       <p class="hint">
         Read each row like this: <b>When I move Plate X, what happens to the other plates?</b>
         Click cells to cycle: <b>—</b> no effect, <b>Same</b> same direction, <b>Opp.</b> opposite direction.
@@ -729,7 +773,7 @@
     </section>
 
     <section class="card span-2">
-      <h2>3. Solution</h2>
+      <h2 class="step-title"><span class="step-badge">3</span>Solution</h2>
 
       <div class="solve-options">
         <label for="solveMode">Algorithm mode</label>
