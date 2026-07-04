@@ -55,6 +55,10 @@
 
     a { color: var(--accent-2); text-decoration: none; }
     a:hover { text-decoration: underline; }
+    a.pill-link:hover,
+    a.pill-link:focus-visible {
+      text-decoration: none;
+    }
 
     header {
       padding: 30px 16px 16px;
@@ -114,6 +118,7 @@
     .pill-link {
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 7px;
       border: 1px solid var(--border);
       background: rgba(36,27,21,.8);
@@ -123,6 +128,22 @@
       font-weight: 800;
       font-size: .92rem;
       box-shadow: 0 6px 18px rgba(0,0,0,.22);
+      cursor: pointer;
+      transition: border-color .15s ease, background .15s ease, color .15s ease, box-shadow .15s ease, transform .05s ease;
+    }
+
+    .pill-link:hover,
+    .pill-link:focus-visible {
+      color: var(--accent-2);
+      background: rgba(43,32,23,.95);
+      border-color: rgba(255,208,115,.45);
+      box-shadow: inset 0 0 0 1px rgba(255,208,115,.05), 0 6px 16px rgba(0,0,0,.18);
+      outline: none;
+    }
+
+    .pill-link:active {
+      transform: translateY(1px);
+      box-shadow: inset 0 0 0 1px rgba(255,208,115,.05), 0 3px 10px rgba(0,0,0,.16);
     }
 
     main {
@@ -408,9 +429,17 @@
 
     .button-row {
       display: flex;
+      align-items: center;
       gap: 8px;
       flex-wrap: wrap;
       margin-top: 10px;
+    }
+
+    .button-row button,
+    .button-row .button {
+      justify-content: center;
+      text-align: center;
+      min-width: 150px;
     }
 
     button.secondary.copy-btn {
@@ -585,41 +614,65 @@
       width: 100%;
       justify-content: space-between;
       color: var(--text);
-      background:
-        linear-gradient(180deg, rgba(255,208,115,.08), rgba(217,154,57,.02)),
-        #15100c;
-      border: 1px solid rgba(255,208,115,.28);
-      border-radius: 14px;
-      box-shadow:
-        inset 0 0 0 1px rgba(255,208,115,.04),
-        0 6px 16px rgba(0,0,0,.12);
-      font-weight: inherit;
+      background: rgba(16,12,9,.55);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: none;
+      font-weight: 900;
       text-align: left;
+      transition: border-color .15s ease, background .15s ease, color .15s ease, box-shadow .15s ease;
+    }
+
+    .mode-picker-trigger:hover,
+    .mode-picker-trigger:focus-visible {
+      color: var(--accent-2);
+      background: rgba(22,16,12,.78);
+      border-color: rgba(255,208,115,.42);
+      box-shadow: inset 0 0 0 1px rgba(255,208,115,.05), 0 6px 16px rgba(0,0,0,.12);
+      outline: none;
+      filter: none;
     }
 
     .mode-picker-trigger:active {
       transform: none;
-      box-shadow:
-        inset 0 0 0 1px rgba(255,208,115,.04),
-        0 6px 16px rgba(0,0,0,.12);
+      box-shadow: inset 0 0 0 1px rgba(255,208,115,.05), 0 4px 12px rgba(0,0,0,.10);
     }
 
     .mode-picker-trigger::after {
       content: "";
-      width: 9px;
-      height: 9px;
+      width: 10px;
+      height: 10px;
       border-right: 2px solid var(--accent-2);
       border-bottom: 2px solid var(--accent-2);
-      transform: translateY(-2px) rotate(45deg);
+      transform: translateY(-3px) rotate(45deg);
       flex: 0 0 auto;
+      opacity: .82;
+      transition: transform .15s ease, opacity .15s ease;
+    }
+
+    .mode-picker-trigger:hover::after,
+    .mode-picker-trigger:focus-visible::after,
+    .mode-picker.open .mode-picker-trigger::after {
+      opacity: 1;
     }
 
     .mode-picker.open .mode-picker-trigger {
-      border-color: var(--accent);
-      box-shadow:
-        0 0 0 3px rgba(217,154,57,.18),
-        inset 0 0 0 1px rgba(255,208,115,.08),
-        0 8px 18px rgba(0,0,0,.16);
+      color: var(--accent-2);
+      background: rgba(16,12,9,.78);
+      border-color: rgba(255,208,115,.48);
+      box-shadow: inset 0 0 0 1px rgba(255,208,115,.06);
+      filter: none;
+    }
+
+    .mode-picker.open .mode-picker-trigger:hover,
+    .mode-picker.open .mode-picker-trigger:focus-visible {
+      background: rgba(22,16,12,.86);
+      border-color: rgba(255,208,115,.62);
+      box-shadow: inset 0 0 0 1px rgba(255,208,115,.08), 0 6px 16px rgba(0,0,0,.12);
+    }
+
+    .mode-picker.open .mode-picker-trigger::after {
+      transform: translateY(2px) rotate(225deg);
     }
 
     .mode-picker-menu {
@@ -629,10 +682,10 @@
       right: 0;
       z-index: 20;
       display: none;
-      padding: 5px;
-      border: 1px solid rgba(255,208,115,.32);
-      border-radius: 14px;
-      background: linear-gradient(180deg, #18110c, #100b08);
+      padding: 6px;
+      border: 1px solid rgba(255,208,115,.42);
+      border-radius: 12px;
+      background: linear-gradient(180deg, rgba(26,20,16,.98), rgba(16,12,9,.98));
       box-shadow: 0 14px 30px rgba(0,0,0,.38);
     }
 
@@ -644,14 +697,15 @@
     .mode-picker-option {
       width: 100%;
       justify-content: flex-start;
-      padding: 10px 12px;
+      padding: 11px 12px;
       color: var(--text);
-      background: transparent;
+      background: rgba(16,12,9,.45);
       border: 1px solid transparent;
       border-radius: 10px;
       box-shadow: none;
-      font-weight: inherit;
+      font-weight: 800;
       text-align: left;
+      transition: border-color .15s ease, background .15s ease, color .15s ease, box-shadow .15s ease;
     }
 
     .mode-picker-option:active {
@@ -660,10 +714,20 @@
     }
 
     .mode-picker-option:hover,
+    .mode-picker-option:focus-visible {
+      color: var(--accent-2);
+      background: rgba(22,16,12,.78);
+      border-color: rgba(255,208,115,.42);
+      box-shadow: inset 0 0 0 1px rgba(255,208,115,.05), 0 4px 12px rgba(0,0,0,.10);
+      outline: none;
+      filter: none;
+    }
+
     .mode-picker-option[aria-selected="true"] {
       color: var(--accent-2);
-      background: rgba(217,154,57,.13);
-      border-color: rgba(255,208,115,.34);
+      background: rgba(16,12,9,.78);
+      border-color: rgba(255,208,115,.48);
+      box-shadow: inset 0 0 0 1px rgba(255,208,115,.06);
     }
 
     .actions {
@@ -716,6 +780,39 @@
     .error { color: var(--danger); font-weight: 800; }
     .small-note { color: var(--muted); font-size: .85rem; margin-top: 8px; }
 
+    .project-links-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding-top: 14px;
+      padding-bottom: 14px;
+    }
+
+    .project-links-card h2 {
+      margin: 0 0 4px;
+      font-size: 1.15rem;
+    }
+
+    .project-links-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: .9rem;
+      line-height: 1.4;
+    }
+
+    .project-links-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .project-links-actions .pill-link {
+      min-width: 150px;
+      padding: 10px 14px;
+    }
+
     .support-card {
       text-align: center;
       background:
@@ -739,14 +836,88 @@
       margin-top: 10px;
     }
 
-    .faq-card h3 {
-      margin: 14px 0 6px;
-      color: var(--text);
-      font-size: 1rem;
+    .faq-list {
+      display: grid;
+      gap: 8px;
     }
 
-    .faq-card p {
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(16,12,9,.55);
+      overflow: hidden;
+      transition: border-color .15s ease, background .15s ease, box-shadow .15s ease, transform .05s ease;
+    }
+
+    .faq-item:hover,
+    .faq-item:focus-within {
+      border-color: rgba(255,208,115,.42);
+      background: rgba(22,16,12,.78);
+      box-shadow: inset 0 0 0 1px rgba(255,208,115,.05), 0 6px 16px rgba(0,0,0,.12);
+    }
+
+    .faq-item[open] {
+      border-color: rgba(255,208,115,.48);
+      background: rgba(16,12,9,.78);
+      box-shadow: inset 0 0 0 1px rgba(255,208,115,.06);
+    }
+
+    .faq-item[open]:hover,
+    .faq-item[open]:focus-within {
+      border-color: rgba(255,208,115,.62);
+      background: rgba(22,16,12,.86);
+      box-shadow: inset 0 0 0 1px rgba(255,208,115,.08), 0 6px 16px rgba(0,0,0,.12);
+    }
+
+    .faq-item summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 13px 14px;
+      color: var(--text);
+      font-size: 1rem;
+      font-weight: 900;
+      cursor: pointer;
+      list-style: none;
+      transition: color .15s ease, background .15s ease;
+    }
+
+    .faq-item summary:hover,
+    .faq-item summary:focus-visible {
+      color: var(--accent-2);
+      background: rgba(217,154,57,.08);
+      outline: none;
+    }
+
+    .faq-item summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .faq-item summary::after {
+      content: "";
+      width: 10px;
+      height: 10px;
+      border-right: 2px solid var(--accent-2);
+      border-bottom: 2px solid var(--accent-2);
+      transform: translateY(-3px) rotate(45deg);
+      flex: 0 0 auto;
+      opacity: .82;
+      transition: transform .15s ease, opacity .15s ease;
+    }
+
+    .faq-item:hover summary::after,
+    .faq-item:focus-within summary::after {
+      opacity: 1;
+    }
+
+    .faq-item[open] summary::after {
+      transform: translateY(2px) rotate(225deg);
+    }
+
+    .faq-item p {
       margin: 0;
+      padding: 4px 14px 14px;
       color: var(--muted);
       line-height: 1.5;
       font-size: .94rem;
@@ -928,6 +1099,31 @@
         display: none;
       }
 
+      .project-links-card {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .project-links-actions {
+        justify-content: stretch;
+      }
+
+      .project-links-actions .pill-link {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .faq-item summary {
+        padding: 12px;
+        font-size: .96rem;
+      }
+
+      .faq-item p {
+        padding: 0 12px 12px;
+        font-size: .9rem;
+      }
+
       .support-card p {
         font-size: .92rem;
       }
@@ -1055,60 +1251,76 @@
       <div id="shareInfo" class="small-note"></div>
     </section>
 
+    <section class="card project-links-card span-2">
+      <div>
+        <h2>Open source</h2>
+        <p>View the code, report problems, or leave a star if the tool helped.</p>
+      </div>
+      <div class="project-links-actions">
+        <a class="pill-link" id="repoTopLink" href="#" target="_blank" rel="noopener">⌘ View source</a>
+        <a class="pill-link" id="supportLink" href="#" target="_blank" rel="noopener noreferrer">☕ Support my work</a>
+      </div>
+    </section>
+
     <section class="card faq-card span-2">
       <h2>FAQ</h2>
 
-      <h3>How do I solve lockpicking puzzles in Gothic Remake?</h3>
-      <p>
-        Enter the plate positions and interactions into the Gothic Remake lockpick solver.
-        By default, the solver prioritizes reducing plate switches for easier in-game execution. You can also choose a shortest-move mode or a faster mode for slower devices.
-      </p>
-
-      <h3>What plate counts are supported?</h3>
-      <p>
-        The solver supports Gothic Remake lockpicking puzzles with 4 to 7 plates.
-      </p>
-
-      <h3>Does the in-game lockpicking skill change how I use the solver?</h3>
-      <p>
-        No. Higher lockpicking skill levels only reduce the number of dependencies between plates.
-        You use the solver the same way, but entering interactions is usually faster and the final solution often has fewer moves.
-      </p>
-
-      <h3>What do “Same” and “Opp.” mean?</h3>
-      <p>
-        “Same” means the affected plate moves in the same direction as the moved plate.
-        “Opp.” means it moves in the opposite direction.
-      </p>
-
-      <h3>What does "x3" mean in the solution?</h3>
-      <p>
-        It means you should perform that move 3 times in a row. For example, "Plate 2 → Right x3" means move Plate 2 to the right 3 times.
-      </p>
-
-      <h3>What is the difference between algorithm modes?</h3>
-      <p>
-        “Fewer plate switches” prioritizes reducing how often you switch between plates, then minimizes moves. It can be easier to follow in-game, but may use more moves.
-        “Fewer plate switches (fast)” is a quicker version focused on reducing plate switches, but it is less optimized than the full version.
-        “Shortest moves” guarantees the lowest number of individual moves and prefers fewer plate switches when several shortest solutions exist.
-        “Shortest moves (fast)” is the fastest strict shortest-move solver, but it may switch between plates more often.
-      </p>
-
-      <h3>Can I share the solution with others?</h3>
-      <p>
-        Yes! Click "Copy solution" to copy the move sequence to your clipboard. You can paste it on Discord, Reddit, or Steam to share with others.
-      </p>
-
-      <h3>What if the solver takes too long?</h3>
-      <p>
-        The solver will try for up to 30 seconds. If it times out, try one of the fast modes or check the entered lock setup.
-        A timeout does not always mean the lock is impossible — it may simply be too complex for the selected mode or device.
-      </p>
-
-      <h3>Is this an official Gothic Remake tool?</h3>
-      <p>
-        No. Gothic Remake Lockbreaker is a fan-made lockpicking puzzle solver.
-      </p>
+      <div class="faq-list">
+        <details class="faq-item">
+          <summary>How do I solve lockpicking puzzles in Gothic Remake?</summary>
+          <p>
+            Enter the plate positions and interactions into the Gothic Remake lockpick solver. By default, the solver prioritizes reducing plate switches for easier in-game execution. You can also choose a shortest-move mode or a faster mode for slower devices.
+          </p>
+        </details>
+        <details class="faq-item">
+          <summary>What plate counts are supported?</summary>
+          <p>
+            The solver supports Gothic Remake lockpicking puzzles with 4 to 7 plates.
+          </p>
+        </details>
+        <details class="faq-item">
+          <summary>Does the in-game lockpicking skill change how I use the solver?</summary>
+          <p>
+            No. Higher lockpicking skill levels only reduce the number of dependencies between plates. You use the solver the same way, but entering interactions is usually faster and the final solution often has fewer moves.
+          </p>
+        </details>
+        <details class="faq-item">
+          <summary>What do “Same” and “Opp.” mean?</summary>
+          <p>
+            “Same” means the affected plate moves in the same direction as the moved plate. “Opp.” means it moves in the opposite direction.
+          </p>
+        </details>
+        <details class="faq-item">
+          <summary>What does "x3" mean in the solution?</summary>
+          <p>
+            It means you should perform that move 3 times in a row. For example, "Plate 2 → Right x3" means move Plate 2 to the right 3 times.
+          </p>
+        </details>
+        <details class="faq-item">
+          <summary>What is the difference between algorithm modes?</summary>
+          <p>
+            “Fewer plate switches” prioritizes reducing how often you switch between plates, then minimizes moves. It can be easier to follow in-game, but may use more moves. “Fewer plate switches (fast)” is a quicker version focused on reducing plate switches, but it is less optimized than the full version. “Shortest moves” guarantees the lowest number of individual moves and prefers fewer plate switches when several shortest solutions exist. “Shortest moves (fast)” is the fastest strict shortest-move solver, but it may switch between plates more often.
+          </p>
+        </details>
+        <details class="faq-item">
+          <summary>Can I share the solution with others?</summary>
+          <p>
+            Yes! Click "Copy solution" to copy the move sequence to your clipboard. You can paste it on Discord, Reddit, or Steam to share with others.
+          </p>
+        </details>
+        <details class="faq-item">
+          <summary>What if the solver takes too long?</summary>
+          <p>
+            The solver will try for up to 30 seconds. If it times out, try one of the fast modes or check the entered lock setup. A timeout does not always mean the lock is impossible — it may simply be too complex for the selected mode or device.
+          </p>
+        </details>
+        <details class="faq-item">
+          <summary>Is this an official Gothic Remake tool?</summary>
+          <p>
+            No. Gothic Remake Lockbreaker is a fan-made lockpicking puzzle solver.
+          </p>
+        </details>
+      </div>
     </section>
 
     <section class="span-2 disclaimer">
@@ -1118,10 +1330,6 @@
 
     <div class="footer span-2">
       Runs locally in your browser. No account. No tracking. No data is sent anywhere.
-      <div class="footer-links">
-        <a class="pill-link" id="repoTopLink" href="#" target="_blank" rel="noopener">⌘ View source</a>
-        <a class="pill-link" id="supportLink" href="#" target="_blank" rel="noopener noreferrer">☕ Support my work</a>
-      </div>
     </div>
   </main>
 
@@ -1162,6 +1370,18 @@
     const solveModePickerMenu = document.getElementById("solveModePickerMenu");
     const solveModeDescription = document.getElementById("solveModeDescription");
     const solvingOverlay = document.getElementById("solvingOverlay");
+
+    function initFaqAccordion() {
+      document.querySelectorAll(".faq-item").forEach(item => {
+        item.addEventListener("toggle", () => {
+          if (!item.open) return;
+
+          document.querySelectorAll(".faq-item").forEach(other => {
+            if (other !== item) other.open = false;
+          });
+        });
+      });
+    }
 
     function initRepoLinks() {
       const ids = ["repoTopLink", "starRepoLink", "repoLink"];
@@ -2591,6 +2811,7 @@
     });
 
     initRepoLinks();
+    initFaqAccordion();
     initSolveMode();
     loadFromUrl();
     render();
